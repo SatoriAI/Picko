@@ -8,12 +8,15 @@
 	let eventDate = $state('');
 	let participantsInput = $state('');
 
-	function handleSubmit() {
-		const participants = participantsInput
+	// Derived array of parsed participant names
+	let participants = $derived(
+		participantsInput
 			.split(',')
 			.map((p) => p.trim())
-			.filter((p) => p.length > 0);
+			.filter((p) => p.length > 0)
+	);
 
+	function handleSubmit() {
 		if (!eventName.trim() || !maxAmount.trim() || participants.length === 0) {
 			alert(m.validation_error());
 			return;
@@ -237,6 +240,24 @@
 								class="w-full resize-none rounded-xl border-[1.5px] px-4 py-3 text-base transition-all focus:border-rose-500 focus:ring-[3px] focus:ring-rose-500/10 focus:outline-none {darkMode ? 'border-slate-600 bg-slate-700/50 text-white placeholder-slate-500 focus:bg-slate-700' : 'border-slate-200 bg-slate-50 text-slate-800 placeholder-slate-400 focus:bg-white'}"
 							></textarea>
 							<span class="mt-1.5 block text-xs {darkMode ? 'text-slate-500' : 'text-slate-400'}">{m.participants_hint()}</span>
+
+							{#if participants.length > 0}
+								<div class="participants-chips-wrapper mt-3">
+									<span class="mb-2 block text-xs font-medium {darkMode ? 'text-slate-400' : 'text-slate-500'}">
+										{m.participants_count({ count: participants.length })}
+									</span>
+									<div class="participants-chips">
+										{#each participants as participant, i}
+											<span
+												class="participants-chip {darkMode ? 'participants-chip--dark' : ''}"
+												style="animation-delay: {i * 30}ms"
+											>
+												{participant}
+											</span>
+										{/each}
+									</div>
+								</div>
+							{/if}
 						</div>
 
 						<button
@@ -294,3 +315,42 @@
 		</div>
 	</footer>
 </div>
+
+<style>
+	.participants-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.participants-chip {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.375rem 0.75rem;
+		font-size: 0.8125rem;
+		font-weight: 500;
+		line-height: 1;
+		color: #475569;
+		background-color: #f1f5f9;
+		border: 1px solid #e2e8f0;
+		border-radius: 9999px;
+		animation: chip-pop-in 0.2s ease-out both;
+	}
+
+	.participants-chip--dark {
+		color: #cbd5e1;
+		background-color: #334155;
+		border-color: #475569;
+	}
+
+	@keyframes chip-pop-in {
+		from {
+			opacity: 0;
+			transform: scale(0.8);
+		}
+		to {
+			opacity: 1;
+			transform: scale(1);
+		}
+	}
+</style>

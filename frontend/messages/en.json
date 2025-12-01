@@ -17,6 +17,7 @@
 	"label_participants": "Participants",
 	"placeholder_participants": "Anna, Ben, Chris, Diana...",
 	"participants_hint": "Separate names with commas",
+	"participants_count": "{count} participants detected",
 	"button_create": "Create event",
 	"or_separator": "or",
 	"button_demo": "Try a demo draw",

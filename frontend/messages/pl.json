@@ -17,6 +17,7 @@
 	"label_participants": "Uczestnicy",
 	"placeholder_participants": "Anna, Bartek, Celina, Dawid...",
 	"participants_hint": "Oddziel imiona przecinkami",
+	"participants_count": "Wykryto {count} uczestników",
 	"button_create": "Stwórz wydarzenie",
 	"or_separator": "lub",
 	"button_demo": "Wypróbuj demo",
