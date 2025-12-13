@@ -122,7 +122,7 @@
 				>
 					<button
 						type="button"
-						class="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all {getLocale() ===
+						class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all {getLocale() ===
 						'en'
 							? 'bg-rose-500 text-white shadow-sm'
 							: darkMode
@@ -135,7 +135,7 @@
 					</button>
 					<button
 						type="button"
-						class="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all {getLocale() ===
+						class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all {getLocale() ===
 						'pl'
 							? 'bg-rose-500 text-white shadow-sm'
 							: darkMode
