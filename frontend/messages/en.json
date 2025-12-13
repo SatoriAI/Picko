@@ -31,5 +31,22 @@
 	"validation_error": "Please fill in all required fields: event name, max amount, and at least one participant.",
 	"success_alert": "Event created! Check the console for details.",
 	"demo_event_name": "Family Christmas",
-	"demo_participants": "Mom, Dad, Anna, Ben, Grandma, Grandpa"
+	"demo_participants": "Mom, Dad, Anna, Ben, Grandma, Grandpa",
+	"admin_event_dashboard": "Event Dashboard",
+	"admin_event_summary": "Event Summary",
+	"admin_max_amount_label": "Max gift amount",
+	"admin_date_label": "Event date",
+	"admin_date_not_set": "Not set",
+	"admin_participants_label": "Participants",
+	"admin_share_links": "Share Participant Links",
+	"admin_share_links_desc": "Send each participant their unique secret link",
+	"admin_copy_link": "Copy link",
+	"admin_copied": "Copied!",
+	"admin_draw_title": "Draw Assignments",
+	"admin_draw_desc": "When everyone is ready, generate the Secret Santa assignments",
+	"admin_draw_button": "Generate draw",
+	"admin_draw_success": "Draw complete! Participants can now check their assignments.",
+	"admin_draw_already_done": "Draw has been generated",
+	"admin_debug_title": "Debug: Assignments JSON",
+	"admin_back_home": "Back to home"
 }

@@ -1,3 +1,6 @@
 {
-	"/": []
+	"/": [],
+	"/event/[id]": [
+		"src/routes/event/[id]/+page.ts"
+	]
 }
