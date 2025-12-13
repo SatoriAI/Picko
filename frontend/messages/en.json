@@ -10,6 +10,7 @@
 	"label_event_name": "Event name",
 	"placeholder_event_name": "e.g. Christmas 2025",
 	"label_max_amount": "Max gift amount",
+	"label_max_amount_optional": "(optional)",
 	"placeholder_max_amount": "100",
 	"currency_suffix": "PLN",
 	"label_date": "Event date",

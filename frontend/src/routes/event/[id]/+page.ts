@@ -21,7 +21,7 @@ function generateMockToken(): string {
 	return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
-export const load: PageLoad = async ({ params, fetch }) => {
+export const load: PageLoad = async ({ params }) => {
 	const eventId = params.id;
 
 	// =================================================================
@@ -58,5 +58,3 @@ export const load: PageLoad = async ({ params, fetch }) => {
 		event: mockEvent
 	};
 };
-
-
