@@ -1,0 +1,12 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Picko is a lightweight Secret Santa app that lets you quickly create a gift draw, add participants, and share unique links so everyone can see who they’re gifting. No accounts required, no friction, just simple holiday magic."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.17.2",
+    "fastapi>=0.124.4",
+    "pydantic>=2.12.5",
+    "structlog>=25.5.0",
+]
