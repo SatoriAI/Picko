@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-import datetime
 import html as html_lib
 from functools import lru_cache
 from pathlib import Path
@@ -79,82 +78,43 @@ class PostMan:
         return str(request.base_url).rstrip("/")
 
     @staticmethod
-    @lru_cache(maxsize=1)
-    def _load_christmas_template() -> str:
-        template_path = Path(__file__).resolve().parent / "templates" / "christmas.html"
+    def _normalize_language(language: str | None) -> str:
+        lang = (language or "en").strip().lower()
+        return "pl" if lang.startswith("pl") else "en"
+
+    @staticmethod
+    @lru_cache(maxsize=8)
+    def _load_christmas_template(language: str) -> str:
+        lang = PostMan._normalize_language(language)
+        template_path = (
+            Path(__file__).resolve().parent / "templates" / "christmas" / f"{lang}.html"
+        )
         return template_path.read_text(encoding="utf-8")
 
     @staticmethod
     def _render_christmas_email_html(
         *,
-        participant_name: str,
-        receiver_name: str,
-        event_name: str,
-        event_date: datetime.date | None,
-        max_amount: int | None,
-        currency: str | None,
+        language: str | None,
         join_url: str,
         app_name: str = "Picko",
     ) -> str:
-        event_date_html = ""
-        if event_date is not None:
-            event_date_html = (
-                f'<p style="margin: 0; color: #334155;"><strong>Date:</strong> '
-                f"{html_lib.escape(event_date.strftime('%d %b %Y'))}</p>"
-            )
-
-        budget_html = ""
-        if max_amount is not None:
-            budget_html = (
-                f'<p style="margin: 8px 0 0; color: #334155;"><strong>Budget:</strong> '
-                f"{html_lib.escape(str(max_amount))} "
-                f"{html_lib.escape(currency or 'PLN')}</p>"
-            )
-
-        raw = PostMan._load_christmas_template()
+        raw = PostMan._load_christmas_template(PostMan._normalize_language(language))
         return Template(raw).safe_substitute(
-            participant_name=html_lib.escape(participant_name),
-            receiver_name=html_lib.escape(receiver_name),
-            event_name=html_lib.escape(event_name),
             join_url=html_lib.escape(join_url),
-            event_date_html=event_date_html,
-            budget_html=budget_html,
             app_name=html_lib.escape(app_name),
         )
 
     @staticmethod
     def _render_christmas_email_text(
         *,
-        participant_name: str,
-        receiver_name: str,
-        event_name: str,
-        event_date: datetime.date | None,
-        max_amount: int | None,
-        currency: str | None,
+        language: str | None,
         join_url: str,
         app_name: str = "Picko",
     ) -> str:
-        lines: list[str] = [
-            f"Ho ho ho, {participant_name}!",
-            "",
-            f"Your Secret Santa assignment for '{event_name}' is ready.",
-            f"You are gifting: {receiver_name}",
-        ]
-
-        if event_date is not None:
-            lines.append(f"Date: {event_date.strftime('%d %b %Y')}")
-        if max_amount is not None:
-            lines.append(f"Budget: {max_amount} {currency or 'PLN'}")
-
-        lines += [
-            "",
-            "Open your gift (keep it secret!):",
-            join_url,
-            "",
-            "Merry Christmas!",
-            f"— Santa (via {app_name})",
-        ]
-        return "\n".join(lines)
+        # Requirement: email should contain only the link (no receiver details).
+        # Keep the plain-text version literally as the URL.
+        _ = (language, app_name)  # reserved for future localization/branding
+        return join_url.strip()
 
     @staticmethod
     def _normalize_recipients(value: Union[str, Sequence[str]]) -> list[str]:
@@ -254,8 +214,9 @@ class PostMan:
         Expected participant shape (duck-typed):
         - participant.email: str | None
         - participant.name: str
-        - participant.given_assignments: list with [0].reveal_token and [0].receiver.name
-        - participant.event: has name/date/max_amount/currency
+        - participant.language: str
+        - participant.given_assignments: list with [0].reveal_token
+        - participant.event: (used only for tagging/logging)
         """
         sent_to: list[str] = []
         skipped_count = 0
@@ -283,31 +244,23 @@ class PostMan:
                     skipped_count += 1
                     continue
 
-                receiver = getattr(assignment, "receiver", None)
-                receiver_name = getattr(receiver, "name", None) or ""
-
                 join_url = f"{frontend_origin}/join/{assignment.reveal_token}"
+                language = self._normalize_language(
+                    getattr(participant, "language", "en")
+                )
                 subject = (
-                    f"Ho ho ho! Your Secret Santa match for {event.name} is ready 🎄"
+                    "Secret Santa: your reveal link 🎄"
+                    if language == "en"
+                    else "Secret Santa: Twój link do odkrycia 🎄"
                 )
 
                 html_body = self._render_christmas_email_html(
-                    participant_name=participant.name,
-                    receiver_name=receiver_name,
-                    event_name=event.name,
-                    event_date=getattr(event, "date", None),
-                    max_amount=getattr(event, "max_amount", None),
-                    currency=getattr(event, "currency", None),
+                    language=language,
                     join_url=join_url,
                     app_name=app_name,
                 )
                 text_body = self._render_christmas_email_text(
-                    participant_name=participant.name,
-                    receiver_name=receiver_name,
-                    event_name=event.name,
-                    event_date=getattr(event, "date", None),
-                    max_amount=getattr(event, "max_amount", None),
-                    currency=getattr(event, "currency", None),
+                    language=language,
                     join_url=join_url,
                     app_name=app_name,
                 )
