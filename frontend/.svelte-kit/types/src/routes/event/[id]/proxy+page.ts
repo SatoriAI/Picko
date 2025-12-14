@@ -1,61 +1,70 @@
 // @ts-nocheck
 import type { PageLoad } from './$types';
+import { error } from '@sveltejs/kit';
 
-// Types that will match your backend API response
 export interface ParticipantData {
 	name: string;
 	token: string;
+	email?: string | null;
 }
 
 export interface EventData {
 	id: string;
 	name: string;
-	maxAmount: number;
+	maxAmount: number | null;
 	date: string | null;
+	currency: string | null;
 	participants: ParticipantData[];
 	drawComplete: boolean;
 	assignments: Array<{ giver: string; receiver: string }> | null;
 }
 
-// Helper to generate mock tokens (remove when backend is ready)
-function generateMockToken(): string {
-	return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+interface BackendParticipant {
+	id: number;
+	name: string;
+	email: string | null;
+	reveal_token: string | null;
 }
 
-export const load = async ({ params }: Parameters<PageLoad>[0]) => {
+interface BackendEvent {
+	id: number;
+	name: string;
+	max_amount: number | null;
+	date: string | null;
+	currency: string | null;
+	participants: BackendParticipant[];
+}
+
+export const load = async ({ params, fetch }: Parameters<PageLoad>[0]) => {
 	const eventId = params.id;
 
-	// =================================================================
-	// TODO: Replace this mock data with actual API call when backend is ready
-	// Example:
-	//
-	// const response = await fetch(`/api/events/${eventId}`);
-	// if (!response.ok) {
-	//   throw error(404, 'Event not found');
-	// }
-	// const event: EventData = await response.json();
-	// return { event };
-	// =================================================================
+	const response = await fetch(`/api/event/${eventId}`);
+	if (response.status === 404) {
+		throw error(404, 'Event not found');
+	}
+	if (!response.ok) {
+		throw error(response.status, 'Failed to load event');
+	}
 
-	// Mock data for development
-	const mockEvent: EventData = {
-		id: eventId,
-		name: 'Family Christmas 2025',
-		maxAmount: 150,
-		date: '2025-12-24',
-		participants: [
-			{ name: 'Mom', token: generateMockToken() },
-			{ name: 'Dad', token: generateMockToken() },
-			{ name: 'Anna', token: generateMockToken() },
-			{ name: 'Ben', token: generateMockToken() },
-			{ name: 'Grandma', token: generateMockToken() },
-			{ name: 'Grandpa', token: generateMockToken() }
-		],
-		drawComplete: false,
+	const backendEvent = (await response.json()) as BackendEvent;
+	const hasAssignments = backendEvent.participants.some((p) => p.reveal_token);
+
+	const event: EventData = {
+		id: String(backendEvent.id),
+		name: backendEvent.name,
+		maxAmount: backendEvent.max_amount,
+		date: backendEvent.date,
+		currency: backendEvent.currency,
+		participants: backendEvent.participants.map((p) => ({
+			name: p.name,
+			email: p.email,
+			token: p.reveal_token ?? String(p.id)
+		})),
+		drawComplete: hasAssignments,
 		assignments: null
 	};
 
 	return {
-		event: mockEvent
+		event
 	};
 };

@@ -6,19 +6,21 @@ export const nodes = [
 	() => import('./nodes/0'),
 	() => import('./nodes/1'),
 	() => import('./nodes/2'),
-	() => import('./nodes/3')
+	() => import('./nodes/3'),
+	() => import('./nodes/4')
 ];
 
 export const server_loads = [];
 
 export const dictionary = {
 		"/": [2],
-		"/event/[id]": [3]
+		"/event/[id]": [3],
+		"/join/[token]": [4]
 	};
 
 export const hooks = {
 	handleError: (({ error }) => { console.error(error) }),
-
+	
 	reroute: universal_hooks.reroute || (() => {}),
 	transport: universal_hooks.transport || {}
 };

@@ -27,16 +27,32 @@ export {};
 
 declare module "$app/types" {
 	export interface AppTypes {
-		RouteId(): "/" | "/event" | "/event/[id]";
+		RouteId(): "/" | "/api" | "/api/draw" | "/api/draw/reveal" | "/api/draw/reveal/[token]" | "/api/event" | "/api/event/[id]" | "/api/event/[id]/send-emails" | "/api/participant" | "/api/participant/[id]" | "/event" | "/event/[id]" | "/join" | "/join/[token]";
 		RouteParams(): {
-			"/event/[id]": { id: string }
+			"/api/draw/reveal/[token]": { token: string };
+			"/api/event/[id]": { id: string };
+			"/api/event/[id]/send-emails": { id: string };
+			"/api/participant/[id]": { id: string };
+			"/event/[id]": { id: string };
+			"/join/[token]": { token: string }
 		};
 		LayoutParams(): {
-			"/": { id?: string };
+			"/": { token?: string; id?: string };
+			"/api": { token?: string; id?: string };
+			"/api/draw": { token?: string };
+			"/api/draw/reveal": { token?: string };
+			"/api/draw/reveal/[token]": { token: string };
+			"/api/event": { id?: string };
+			"/api/event/[id]": { id: string };
+			"/api/event/[id]/send-emails": { id: string };
+			"/api/participant": { id?: string };
+			"/api/participant/[id]": { id: string };
 			"/event": { id?: string };
-			"/event/[id]": { id: string }
+			"/event/[id]": { id: string };
+			"/join": { token?: string };
+			"/join/[token]": { token: string }
 		};
-		Pathname(): "/" | "/event" | "/event/" | `/event/${string}` & {} | `/event/${string}/` & {};
+		Pathname(): "/" | "/api" | "/api/" | "/api/draw" | "/api/draw/" | "/api/draw/reveal" | "/api/draw/reveal/" | `/api/draw/reveal/${string}` & {} | `/api/draw/reveal/${string}/` & {} | "/api/event" | "/api/event/" | `/api/event/${string}` & {} | `/api/event/${string}/` & {} | `/api/event/${string}/send-emails` & {} | `/api/event/${string}/send-emails/` & {} | "/api/participant" | "/api/participant/" | `/api/participant/${string}` & {} | `/api/participant/${string}/` & {} | "/event" | "/event/" | `/event/${string}` & {} | `/event/${string}/` & {} | "/join" | "/join/" | `/join/${string}` & {} | `/join/${string}/` & {};
 		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
 		Asset(): "/robots.txt" | string & {};
 	}

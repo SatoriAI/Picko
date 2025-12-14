@@ -15,7 +15,7 @@
 		? 'bg-slate-800'
 		: 'bg-white'}"
 >
-	{#each locales as { code, flag, label }}
+	{#each locales as { code, flag, label } (code)}
 		<button
 			type="button"
 			class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all {currentLocale ===

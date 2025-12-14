@@ -1,6 +1,8 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
 	import { darkMode } from '$lib/stores/theme';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import {
 		PageLayout,
 		Card,
@@ -17,6 +19,7 @@
 	let maxAmount = $state('');
 	let eventDate = $state('');
 	let participantsInput = $state('');
+	let isSubmitting = $state(false);
 
 	// Derived array of parsed participant names
 	let participants = $derived(
@@ -26,20 +29,47 @@
 			.filter((p) => p.length > 0)
 	);
 
-	function handleSubmit() {
-		if (!eventName.trim() || !maxAmount.trim() || participants.length === 0) {
+	async function handleSubmit() {
+		if (!eventName.trim() || participants.length === 0) {
 			alert(m.validation_error());
 			return;
 		}
 
-		console.log({
-			eventName: eventName.trim(),
-			maxAmount: Number(maxAmount),
-			date: eventDate || null,
-			participants
-		});
+		const maxAmountRaw = String(maxAmount ?? '');
+		const maxAmountValue = maxAmountRaw.trim() ? Number(maxAmountRaw) : null;
+		if (maxAmountValue !== null && (!Number.isFinite(maxAmountValue) || maxAmountValue <= 0)) {
+			alert(m.validation_error());
+			return;
+		}
 
-		alert(m.success_alert());
+		isSubmitting = true;
+		try {
+			const response = await fetch('/api/event', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					name: eventName.trim(),
+					max_amount: maxAmountValue,
+					date: eventDate || null,
+					currency: null,
+					participants: participants.map((name) => ({ name }))
+				})
+			});
+
+			if (!response.ok) {
+				console.error('Failed to create event', await response.text());
+				alert(m.validation_error());
+				return;
+			}
+
+			const created = (await response.json()) as { id: number };
+			await goto(resolve(`/event/${created.id}`));
+		} catch (err) {
+			console.error('Create event request failed', err);
+			alert('Failed to create event. Please check the console/network tab.');
+		} finally {
+			isSubmitting = false;
+		}
 	}
 
 	function handleDemo() {
@@ -84,9 +114,9 @@
 				{m.hero_description()}
 			</p>
 			<div class="flex flex-wrap justify-center gap-2.5">
-				{#each badges as { icon, iconColor, message }}
-					<Badge {icon} {iconColor}>
-						{message()}
+				{#each badges as badge, i (i)}
+					<Badge icon={badge.icon} iconColor={badge.iconColor}>
+						{badge.message()}
 					</Badge>
 				{/each}
 			</div>
@@ -106,8 +136,8 @@
 					{m.how_it_works_title()}
 				</h2>
 				<div class="flex flex-col gap-4">
-					{#each steps as { step, title, desc, color }}
-						<StepCard {step} title={title()} description={desc()} {color} />
+					{#each steps as s (s.step)}
+						<StepCard step={s.step} title={s.title()} description={s.desc()} color={s.color} />
 					{/each}
 				</div>
 			</div>
@@ -193,7 +223,9 @@
 						{/if}
 					</div>
 
-					<Button type="submit">{m.button_create()}</Button>
+					<Button type="submit" disabled={isSubmitting}>
+						{isSubmitting ? 'Creating…' : m.button_create()}
+					</Button>
 				</form>
 
 				<div

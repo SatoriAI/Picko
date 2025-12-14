@@ -6,6 +6,7 @@
 		type?: 'button' | 'submit';
 		variant?: 'primary' | 'secondary';
 		onclick?: () => void;
+		disabled?: boolean;
 		class?: string;
 		children: Snippet;
 	}
@@ -14,6 +15,7 @@
 		type = 'button',
 		variant = 'primary',
 		onclick,
+		disabled = false,
 		class: className = '',
 		children
 	}: Props = $props();
@@ -30,7 +32,10 @@
 <button
 	{type}
 	{onclick}
-	class="w-full cursor-pointer rounded-xl px-6 py-3.5 text-base font-semibold transition-all {variantClasses} {className}"
+	{disabled}
+	class="w-full cursor-pointer rounded-xl px-6 py-3.5 text-base font-semibold transition-all {variantClasses} {disabled
+		? 'cursor-not-allowed opacity-60 hover:translate-y-0 hover:shadow-none active:translate-y-0'
+		: ''} {className}"
 >
 	{@render children()}
 </button>
