@@ -17,6 +17,7 @@
 
 	let eventName = $state('');
 	let maxAmount = $state('');
+	let currency = $state<'PLN' | 'USD' | 'EUR'>('PLN');
 	let eventDate = $state('');
 	let participantsInput = $state('');
 	let isSubmitting = $state(false);
@@ -51,7 +52,7 @@
 					name: eventName.trim(),
 					max_amount: maxAmountValue,
 					date: eventDate || null,
-					currency: null,
+					currency: maxAmountValue === null ? null : currency,
 					participants: participants.map((name) => ({ name }))
 				})
 			});
@@ -75,6 +76,7 @@
 	function handleDemo() {
 		eventName = m.demo_event_name();
 		maxAmount = '150';
+		currency = 'PLN';
 		eventDate = '2025-12-24';
 		participantsInput = m.demo_participants();
 	}
@@ -173,15 +175,20 @@
 								bind:value={maxAmount}
 								placeholder={m.placeholder_max_amount()}
 								min="1"
-								class="rounded-r-none border-r-0"
+								class="no-number-spin rounded-r-none border-r-0"
 							/>
-							<span
-								class="flex items-center rounded-r-xl border-[1.5px] border-l-0 px-4 text-sm font-medium {$darkMode
-									? 'border-slate-600 bg-slate-700 text-slate-400'
-									: 'border-slate-200 bg-slate-100 text-slate-500'}"
+							<select
+								id="currency"
+								bind:value={currency}
+								aria-label="Currency"
+								class="w-[92px] cursor-pointer rounded-l-none rounded-r-xl border-[1.5px] border-l-0 px-3 py-3 text-base font-medium transition-all focus:border-rose-500 focus:ring-[3px] focus:ring-rose-500/10 focus:outline-none {$darkMode
+									? 'border-slate-600 bg-slate-700/50 text-white focus:bg-slate-700'
+									: 'border-slate-200 bg-slate-50 text-slate-800 focus:bg-white'}"
 							>
-								{m.currency_suffix()}
-							</span>
+								<option value="PLN">PLN</option>
+								<option value="USD">USD</option>
+								<option value="EUR">EUR</option>
+							</select>
 						</div>
 					</div>
 
@@ -243,3 +250,17 @@
 		</div>
 	</section>
 </PageLayout>
+
+<style>
+	/* Remove number input arrows (spinners) for max amount. */
+	:global(input.no-number-spin::-webkit-outer-spin-button),
+	:global(input.no-number-spin::-webkit-inner-spin-button) {
+		-webkit-appearance: none;
+		margin: 0;
+	}
+
+	:global(input.no-number-spin) {
+		appearance: textfield;
+		-moz-appearance: textfield;
+	}
+</style>

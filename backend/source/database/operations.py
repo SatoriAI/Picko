@@ -1,29 +1,11 @@
 import secrets
-from random import shuffle
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from source.database.models import Assignment, Draw, Event, Participant
-
-
-def generate_derangement(
-    participants: list[Participant],
-) -> list[tuple[Participant, Participant]]:
-    n = len(participants)
-    if n < 2:
-        return []
-
-    indices = list(range(n))
-    is_valid = False
-
-    while not is_valid:
-        shuffled = indices.copy()
-        shuffle(shuffled)
-        is_valid = all(i != shuffled[i] for i in range(n))
-
-    return [(participants[i], participants[shuffled[i]]) for i in range(n)]
+from source.utils.distribution import generate_derangement
 
 
 async def get_event(session: AsyncSession, *, event_id: int) -> Event | None:
@@ -38,22 +20,6 @@ async def get_event(session: AsyncSession, *, event_id: int) -> Event | None:
         .where(Event.id == event_id)
     )
     return result.scalar_one_or_none()
-
-
-async def get_event_participants_with_assignments(
-    session: AsyncSession, *, event_id: int
-) -> list[Participant]:
-    result = await session.execute(
-        select(Participant)
-        .options(
-            selectinload(Participant.given_assignments).selectinload(
-                Assignment.receiver
-            ),
-            selectinload(Participant.event),
-        )
-        .where(Participant.event_id == event_id)
-    )
-    return list(result.scalars().all())
 
 
 async def create_event(
@@ -103,6 +69,22 @@ async def create_event(
         .where(Event.id == event.id)
     )
     return result.scalar_one()
+
+
+async def get_event_participants_with_assignments(
+    session: AsyncSession, *, event_id: int
+) -> list[Participant]:
+    result = await session.execute(
+        select(Participant)
+        .options(
+            selectinload(Participant.given_assignments).selectinload(
+                Assignment.receiver
+            ),
+            selectinload(Participant.event),
+        )
+        .where(Participant.event_id == event_id)
+    )
+    return list(result.scalars().all())
 
 
 async def update_participant(
