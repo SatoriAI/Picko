@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from source.database.connection import get_session
 from source.database.operations import (
     execute_draw,
+    get_event,
     get_participant_by_access_token,
     update_participant,
 )
@@ -80,7 +81,16 @@ async def get_my_status(
             detail="Participant not found. The link may be invalid.",
         )
 
-    event = participant.event
+    # IMPORTANT:
+    # In async SQLAlchemy, accessing a not-yet-loaded relationship triggers a lazy
+    # load which raises `MissingGreenlet`. We therefore fetch the Event with its
+    # participants eagerly loaded before calling `len(event.participants)`.
+    event = await get_event(session, event_id=participant.event_id)
+    if event is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Event not found for participant.",
+        )
 
     # Auto-trigger draw if deadline has passed and draw not yet complete
     now = datetime.datetime.now(datetime.timezone.utc)

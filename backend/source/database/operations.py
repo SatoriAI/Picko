@@ -106,7 +106,17 @@ async def execute_draw(session: AsyncSession, event: Event) -> None:
     if event.is_draw_complete:
         return  # Already done
 
-    if len(event.participants) < 2:
+    # IMPORTANT:
+    # In async SQLAlchemy, relying on lazy-loading relationships can raise
+    # `MissingGreenlet`. Always fetch participants explicitly for the draw.
+    result = await session.execute(
+        select(Participant)
+        .where(Participant.event_id == event.id)
+        .order_by(Participant.id)
+    )
+    participants = list(result.scalars().all())
+
+    if len(participants) < 2:
         return  # Not enough participants
 
     # Create the draw
@@ -115,7 +125,7 @@ async def execute_draw(session: AsyncSession, event: Event) -> None:
     await session.flush()
 
     # Generate derangement and create assignments
-    pairs = generate_derangement(event.participants)
+    pairs = generate_derangement(participants)
     for giver, receiver in pairs:
         assignment = Assignment(
             draw_id=draw.id,
