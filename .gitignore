@@ -1,12 +1,22 @@
 node_modules
 
+# Python / backend
+.venv
+__pycache__/
+*.py[cod]
+*.pyw
+*.pyz
+*.pyzw
+*.pyzwz
+*.pywz
+
 # Output
 .output
 .vercel
 .netlify
 .wrangler
-/.svelte-kit
-/build
+.svelte-kit/
+build/
 
 # OS
 .DS_Store
@@ -24,3 +34,6 @@ vite.config.ts.timestamp-*
 
 # Paraglide
 src/lib/paraglide
+
+# inlang (cache only; project config stays tracked)
+frontend/project.inlang/cache/
