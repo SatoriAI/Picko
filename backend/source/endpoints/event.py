@@ -1,6 +1,6 @@
 import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +11,8 @@ from source.database.operations import (
     get_event,
     get_event_participants_with_assignments,
 )
+from source.settings import settings
+from source.utils.postman import PostMan, PostManConfigError
 
 from structlog import get_logger
 
@@ -134,6 +136,7 @@ class SendEmailsResponse(BaseModel):
 )
 async def send_emails(
     event_id: int,
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> SendEmailsResponse:
     participants = await get_event_participants_with_assignments(
@@ -146,33 +149,22 @@ async def send_emails(
             detail="Event not found or has no participants",
         )
 
-    sent_to: list[str] = []
-    skipped_count = 0
+    try:
+        postman = PostMan(settings)
+    except PostManConfigError as exc:
+        logger.exception("Email sending is not configured", error=str(exc))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Email sending is not configured on the server.",
+        ) from exc
 
-    for participant in participants:
-        if not participant.email:
-            skipped_count += 1
-            continue
-
-        if not participant.given_assignments:
-            skipped_count += 1
-            continue
-
-        assignment = participant.given_assignments[0]
-        receiver_name = assignment.receiver.name
-        event = participant.event
-
-        # TODO: Replace with actual email sending when SMTP is configured
-        logger.info(
-            "Would send email",
-            to=participant.email,
-            participant_name=participant.name,
-            receiver_name=receiver_name,
-            event_name=event.name,
-            reveal_token=assignment.reveal_token,
-        )
-
-        sent_to.append(participant.name)
+    sent_to, skipped_count = await postman.send_event_emails(
+        participants=participants,
+        event_id=event_id,
+        request=request,
+        cors_origins=settings.cors_origins,
+        app_name="Picko",
+    )
 
     return SendEmailsResponse(
         sent_count=len(sent_to),
