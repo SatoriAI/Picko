@@ -1,4 +1,5 @@
 import secrets
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,27 +23,96 @@ async def get_event(session: AsyncSession, *, event_id: int) -> Event | None:
     return result.scalar_one_or_none()
 
 
+async def get_event_by_registration_token(
+    session: AsyncSession, *, registration_token: str
+) -> Event | None:
+    """Get event by its shareable registration token."""
+    result = await session.execute(
+        select(Event)
+        .options(
+            selectinload(Event.participants).selectinload(
+                Participant.given_assignments
+            ),
+            selectinload(Event.draws),
+        )
+        .where(Event.registration_token == registration_token)
+    )
+    return result.scalar_one_or_none()
+
+
 async def create_event(
     session: AsyncSession,
     *,
     name: str,
-    participants: list[dict[str, str | None]],
+    registration_deadline: datetime,
     max_amount: int | None = None,
     date=None,
     currency: str | None = None,
 ) -> Event:
-    event = Event(name=name, max_amount=max_amount, date=date, currency=currency)
-    event.participants = [
-        Participant(name=p["name"], email=p.get("email")) for p in participants
-    ]
+    """Create an event without participants (they self-register later)."""
+    event = Event(
+        name=name,
+        max_amount=max_amount,
+        date=date,
+        currency=currency,
+        registration_deadline=registration_deadline,
+        registration_token=secrets.token_urlsafe(32),
+        is_draw_complete=False,
+    )
 
     session.add(event)
-    await session.flush()  # Get participant IDs
+    await session.commit()
 
-    # Auto-generate the draw
+    # Reload with all relationships to avoid lazy loading issues
+    result = await session.execute(
+        select(Event)
+        .options(
+            selectinload(Event.participants).selectinload(
+                Participant.given_assignments
+            ),
+            selectinload(Event.draws),
+        )
+        .where(Event.id == event.id)
+    )
+    return result.scalar_one()
+
+
+async def register_participant(
+    session: AsyncSession,
+    *,
+    event_id: int,
+    name: str,
+    email: str | None = None,
+    language: str = "en",
+    wishlist: str | None = None,
+) -> Participant:
+    """Register a new participant to an event."""
+    participant = Participant(
+        event_id=event_id,
+        name=name,
+        email=email,
+        language=language,
+        wishlist=wishlist,
+        access_token=secrets.token_urlsafe(32),
+    )
+    session.add(participant)
+    await session.commit()
+    await session.refresh(participant)
+    return participant
+
+
+async def execute_draw(session: AsyncSession, event: Event) -> None:
+    """Execute the Secret Santa draw for an event."""
+    if event.is_draw_complete:
+        return  # Already done
+
+    if len(event.participants) < 2:
+        return  # Not enough participants
+
+    # Create the draw
     draw = Draw(event_id=event.id)
     session.add(draw)
-    await session.flush()  # Get draw ID
+    await session.flush()
 
     # Generate derangement and create assignments
     pairs = generate_derangement(event.participants)
@@ -55,20 +125,35 @@ async def create_event(
         )
         session.add(assignment)
 
+    # Mark event as draw complete
+    event.is_draw_complete = True
     await session.commit()
 
-    # Reload with all relationships
-    result = await session.execute(
-        select(Event)
-        .options(
-            selectinload(Event.participants).selectinload(
-                Participant.given_assignments
-            ),
-            selectinload(Event.draws).selectinload(Draw.assignments),
-        )
-        .where(Event.id == event.id)
-    )
-    return result.scalar_one()
+
+async def get_event_and_maybe_draw(
+    session: AsyncSession, *, event_id: int
+) -> Event | None:
+    """
+    Get event and automatically execute draw if:
+    - Deadline has passed
+    - Draw hasn't been executed yet
+    - There are at least 2 participants
+    """
+    event = await get_event(session, event_id=event_id)
+    if event is None:
+        return None
+
+    now = datetime.now(timezone.utc)
+    if (
+        not event.is_draw_complete
+        and now > event.registration_deadline
+        and len(event.participants) >= 2
+    ):
+        await execute_draw(session, event)
+        # Reload to get the new assignments
+        event = await get_event(session, event_id=event_id)
+
+    return event
 
 
 async def get_event_participants_with_assignments(
@@ -115,5 +200,24 @@ async def get_assignment_by_token(
             selectinload(Assignment.receiver),
         )
         .where(Assignment.reveal_token == reveal_token)
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_participant_by_access_token(
+    session: AsyncSession,
+    *,
+    access_token: str,
+) -> Participant | None:
+    """Get a participant by their personal access token, with event and assignment info."""
+    result = await session.execute(
+        select(Participant)
+        .options(
+            selectinload(Participant.event),
+            selectinload(Participant.given_assignments).selectinload(
+                Assignment.receiver
+            ),
+        )
+        .where(Participant.access_token == access_token)
     )
     return result.scalar_one_or_none()

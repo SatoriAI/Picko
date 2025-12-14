@@ -3,10 +3,12 @@
 
 	interface Props {
 		id: string;
-		type?: 'text' | 'number' | 'date' | 'email';
+		type?: 'text' | 'number' | 'date' | 'email' | 'datetime-local';
 		value?: string;
 		placeholder?: string;
 		min?: string;
+		readonly?: boolean;
+		required?: boolean;
 		class?: string;
 	}
 
@@ -16,10 +18,12 @@
 		value = $bindable(''),
 		placeholder = '',
 		min,
+		readonly = false,
+		required = false,
 		class: className = ''
 	}: Props = $props();
 
 	let fieldClasses = $derived(getFormFieldClasses(className));
 </script>
 
-<input {type} {id} bind:value {placeholder} {min} class={fieldClasses} />
+<input {type} {id} bind:value {placeholder} {min} {readonly} {required} class={fieldClasses} />

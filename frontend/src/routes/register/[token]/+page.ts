@@ -1,17 +1,8 @@
 import type { PageLoad } from './$types';
 import { error } from '@sveltejs/kit';
 
-export interface ParticipantData {
-	id: number;
-	name: string;
-	email?: string | null;
-	language: string;
-	wishlist: string | null;
-	shareToken: string | null;
-}
-
 export interface EventData {
-	id: string;
+	id: number;
 	name: string;
 	maxAmount: number | null;
 	date: string | null;
@@ -19,16 +10,11 @@ export interface EventData {
 	registrationDeadline: string;
 	registrationToken: string;
 	isDrawComplete: boolean;
-	participants: ParticipantData[];
-}
-
-interface BackendParticipant {
-	id: number;
-	name: string;
-	email: string | null;
-	language: string;
-	wishlist: string | null;
-	reveal_token: string | null;
+	participants: Array<{
+		id: number;
+		name: string;
+		wishlist: string | null;
+	}>;
 }
 
 interface BackendEvent {
@@ -40,13 +26,18 @@ interface BackendEvent {
 	registration_deadline: string;
 	registration_token: string;
 	is_draw_complete: boolean;
-	participants: BackendParticipant[];
+	participants: Array<{
+		id: number;
+		name: string;
+		email: string | null;
+		language: string;
+		wishlist: string | null;
+	}>;
 }
 
 export const load: PageLoad = async ({ params, fetch }) => {
-	const eventId = params.id;
+	const response = await fetch(`/api/event/register/${params.token}`);
 
-	const response = await fetch(`/api/event/${eventId}`);
 	if (response.status === 404) {
 		throw error(404, 'Event not found');
 	}
@@ -57,7 +48,7 @@ export const load: PageLoad = async ({ params, fetch }) => {
 	const backendEvent = (await response.json()) as BackendEvent;
 
 	const event: EventData = {
-		id: String(backendEvent.id),
+		id: backendEvent.id,
 		name: backendEvent.name,
 		maxAmount: backendEvent.max_amount,
 		date: backendEvent.date,
@@ -68,14 +59,12 @@ export const load: PageLoad = async ({ params, fetch }) => {
 		participants: backendEvent.participants.map((p) => ({
 			id: p.id,
 			name: p.name,
-			email: p.email,
-			language: p.language,
-			wishlist: p.wishlist,
-			shareToken: p.reveal_token
+			wishlist: p.wishlist
 		}))
 	};
 
 	return {
-		event
+		event,
+		token: params.token
 	};
 };

@@ -184,6 +184,28 @@
 								</div>
 							{/if}
 						</div>
+
+						<!-- Wishlist -->
+						{#if assignment.receiver_wishlist}
+							<div class="mt-6 rounded-xl bg-slate-50 p-4 dark:bg-slate-700/50">
+								<p
+									class="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
+								>
+									{m.join_wishlist_title()}
+								</p>
+								<div class="flex flex-wrap justify-center gap-2">
+									{#each assignment.receiver_wishlist.split(',').map((w) => w.trim()) as wish}
+										{#if wish}
+											<span
+												class="rounded-full bg-white px-3 py-1 text-sm text-slate-700 shadow-sm dark:bg-slate-600 dark:text-slate-200"
+											>
+												🎁 {wish}
+											</span>
+										{/if}
+									{/each}
+								</div>
+							</div>
+						{/if}
 					</Card>
 
 					<!-- Fun reminder -->

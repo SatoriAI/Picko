@@ -9,18 +9,16 @@
 		Badge,
 		StepCard,
 		Input,
-		TextArea,
 		Select,
 		FormLabel,
-		Button,
-		Chip
+		Button
 	} from '$lib/components';
 
 	let eventName = $state('');
 	let maxAmount = $state('');
 	let currency = $state<'PLN' | 'USD' | 'EUR'>('PLN');
 	let eventDate = $state('');
-	let participantsInput = $state('');
+	let registrationDeadline = $state('');
 	let isSubmitting = $state(false);
 
 	// Currency options for select
@@ -30,16 +28,8 @@
 		{ value: 'EUR', label: 'EUR' }
 	];
 
-	// Derived array of parsed participant names
-	let participants = $derived(
-		participantsInput
-			.split(',')
-			.map((p) => p.trim())
-			.filter((p) => p.length > 0)
-	);
-
 	async function handleSubmit() {
-		if (!eventName.trim() || participants.length === 0) {
+		if (!eventName.trim() || !registrationDeadline) {
 			alert(m.validation_error());
 			return;
 		}
@@ -51,20 +41,28 @@
 			return;
 		}
 
+		// Validate deadline is in the future
+		const deadlineDate = new Date(registrationDeadline);
+		if (deadlineDate <= new Date()) {
+			alert(m.validation_deadline_future());
+			return;
+		}
+
 		isSubmitting = true;
 		try {
-			const created = await fetchJson<{ id: number }>('/api/event', {
+			const created = await fetchJson<{ id: number; registration_token: string }>('/api/event', {
 				method: 'POST',
 				body: JSON.stringify({
 					name: eventName.trim(),
 					max_amount: maxAmountValue,
 					date: eventDate || null,
 					currency: maxAmountValue === null ? null : currency,
-					participants: participants.map((name) => ({ name }))
+					registration_deadline: new Date(registrationDeadline).toISOString()
 				})
 			});
 
-			await goto(resolve(`/event/${created.id}`));
+			// Redirect to registration page so the creator can join as participant
+			await goto(resolve(`/register/${created.registration_token}`));
 		} catch (err) {
 			console.error('Create event request failed', err);
 			alert(m.validation_error());
@@ -73,15 +71,7 @@
 		}
 	}
 
-	function handleDemo() {
-		eventName = m.demo_event_name();
-		maxAmount = '150';
-		currency = 'PLN';
-		eventDate = '2025-12-24';
-		participantsInput = m.demo_participants();
-	}
-
-	// Steps data
+	// Steps data - updated for new flow
 	const steps = [
 		{
 			step: 1,
@@ -187,44 +177,21 @@
 					</div>
 
 					<div class="mb-4">
-						<FormLabel for="participants">{m.label_participants()}</FormLabel>
-						<TextArea
-							id="participants"
-							bind:value={participantsInput}
-							placeholder={m.placeholder_participants()}
+						<FormLabel for="registrationDeadline">{m.label_deadline()}</FormLabel>
+						<Input
+							type="datetime-local"
+							id="registrationDeadline"
+							bind:value={registrationDeadline}
 						/>
 						<span class="mt-1.5 block text-xs text-slate-400 dark:text-slate-500">
-							{m.participants_hint()}
+							{m.label_deadline_hint()}
 						</span>
-
-						{#if participants.length > 0}
-							<div class="mt-3">
-								<span class="mb-2 block text-xs font-medium text-slate-500 dark:text-slate-400">
-									{m.participants_count({ count: participants.length })}
-								</span>
-								<div class="flex flex-wrap gap-2">
-									{#each participants as participant, i (i)}
-										<Chip animated delay={i * 30}>
-											{participant}
-										</Chip>
-									{/each}
-								</div>
-							</div>
-						{/if}
 					</div>
 
 					<Button type="submit" disabled={isSubmitting}>
-						{isSubmitting ? 'Creating…' : m.button_create()}
+						{isSubmitting ? m.creating() : m.button_create()}
 					</Button>
 				</form>
-
-				<div class="my-5 flex items-center gap-4 text-sm text-slate-400 dark:text-slate-500">
-					<span class="h-px flex-1 bg-slate-200 dark:bg-slate-700"></span>
-					<span>{m.or_separator()}</span>
-					<span class="h-px flex-1 bg-slate-200 dark:bg-slate-700"></span>
-				</div>
-
-				<Button variant="secondary" onclick={handleDemo}>{m.button_demo()}</Button>
 			</Card>
 		</div>
 	</section>

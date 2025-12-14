@@ -4,6 +4,7 @@ import { error } from '@sveltejs/kit';
 export interface AssignmentData {
 	giver_name: string;
 	receiver_name: string;
+	receiver_wishlist: string | null;
 	event: {
 		name: string;
 		date: string | null;

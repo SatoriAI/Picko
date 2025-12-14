@@ -1,6 +1,7 @@
 from datetime import date, datetime
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -31,6 +32,17 @@ class Event(Base):
     max_amount: Mapped[int | None] = mapped_column(Integer(), nullable=True)
     currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
 
+    # Registration
+    registration_deadline: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    registration_token: Mapped[str] = mapped_column(
+        String(64), nullable=False, unique=True
+    )
+    is_draw_complete: Mapped[bool] = mapped_column(
+        Boolean(), default=False, nullable=False
+    )
+
     # SQL Alchemy Relations
     participants: Mapped[list["Participant"]] = relationship(
         back_populates="event", cascade="all, delete-orphan"
@@ -56,6 +68,11 @@ class Participant(Base):
     # Details
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    language: Mapped[str] = mapped_column(String(5), default="en", nullable=False)
+    wishlist: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+    # Personal access token - allows participant to view their own assignment
+    access_token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
 
     # SQL Alchemy Relations
     event: Mapped["Event"] = relationship(back_populates="participants")

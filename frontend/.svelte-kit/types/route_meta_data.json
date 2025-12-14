@@ -6,11 +6,17 @@
 	"/api/event": [
 		"src/routes/api/event/+server.ts"
 	],
+	"/api/event/register/[token]": [
+		"src/routes/api/event/register/[token]/+server.ts"
+	],
 	"/api/event/[id]": [
 		"src/routes/api/event/[id]/+server.ts"
 	],
 	"/api/event/[id]/send-emails": [
 		"src/routes/api/event/[id]/send-emails/+server.ts"
+	],
+	"/api/participant/me/[token]": [
+		"src/routes/api/participant/me/[token]/+server.ts"
 	],
 	"/api/participant/[id]": [
 		"src/routes/api/participant/[id]/+server.ts"
@@ -20,5 +26,11 @@
 	],
 	"/join/[token]": [
 		"src/routes/join/[token]/+page.ts"
+	],
+	"/my/[token]": [
+		"src/routes/my/[token]/+page.ts"
+	],
+	"/register/[token]": [
+		"src/routes/register/[token]/+page.ts"
 	]
 }

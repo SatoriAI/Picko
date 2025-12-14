@@ -24,6 +24,7 @@ class AssignmentReveal(BaseModel):
 
     giver_name: str
     receiver_name: str
+    receiver_wishlist: str | None
     event: EventInfo
 
 
@@ -47,6 +48,7 @@ async def reveal_assignment(
     return AssignmentReveal(
         giver_name=assignment.giver.name,
         receiver_name=assignment.receiver.name,
+        receiver_wishlist=assignment.receiver.wishlist,
         event=EventInfo(
             name=assignment.giver.event.name,
             date=assignment.giver.event.date,

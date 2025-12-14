@@ -5,8 +5,10 @@ import { error } from '@sveltejs/kit';
 export interface ParticipantData {
 	id: number;
 	name: string;
-	shareToken: string;
 	email?: string | null;
+	language: string;
+	wishlist: string | null;
+	shareToken: string | null;
 }
 
 export interface EventData {
@@ -15,15 +17,18 @@ export interface EventData {
 	maxAmount: number | null;
 	date: string | null;
 	currency: string | null;
+	registrationDeadline: string;
+	registrationToken: string;
+	isDrawComplete: boolean;
 	participants: ParticipantData[];
-	drawComplete: boolean;
-	assignments: Array<{ giver: string; receiver: string }> | null;
 }
 
 interface BackendParticipant {
 	id: number;
 	name: string;
 	email: string | null;
+	language: string;
+	wishlist: string | null;
 	reveal_token: string | null;
 }
 
@@ -33,6 +38,9 @@ interface BackendEvent {
 	max_amount: number | null;
 	date: string | null;
 	currency: string | null;
+	registration_deadline: string;
+	registration_token: string;
+	is_draw_complete: boolean;
 	participants: BackendParticipant[];
 }
 
@@ -48,7 +56,6 @@ export const load = async ({ params, fetch }: Parameters<PageLoad>[0]) => {
 	}
 
 	const backendEvent = (await response.json()) as BackendEvent;
-	const hasAssignments = backendEvent.participants.some((p) => p.reveal_token);
 
 	const event: EventData = {
 		id: String(backendEvent.id),
@@ -56,14 +63,17 @@ export const load = async ({ params, fetch }: Parameters<PageLoad>[0]) => {
 		maxAmount: backendEvent.max_amount,
 		date: backendEvent.date,
 		currency: backendEvent.currency,
+		registrationDeadline: backendEvent.registration_deadline,
+		registrationToken: backendEvent.registration_token,
+		isDrawComplete: backendEvent.is_draw_complete,
 		participants: backendEvent.participants.map((p) => ({
 			id: p.id,
 			name: p.name,
 			email: p.email,
-			shareToken: p.reveal_token ?? String(p.id)
-		})),
-		drawComplete: hasAssignments,
-		assignments: null
+			language: p.language,
+			wishlist: p.wishlist,
+			shareToken: p.reveal_token
+		}))
 	};
 
 	return {

@@ -7,8 +7,10 @@
 	interface Participant {
 		id: number;
 		name: string;
-		shareToken: string;
+		shareToken: string | null;
 		email?: string | null;
+		language?: string;
+		wishlist?: string | null;
 	}
 
 	interface Props {
@@ -62,6 +64,7 @@
 	}
 
 	async function copyLink() {
+		if (!participant.shareToken) return;
 		const link = `${window.location.origin}/join/${participant.shareToken}`;
 		try {
 			await navigator.clipboard.writeText(link);
