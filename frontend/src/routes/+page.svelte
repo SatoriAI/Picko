@@ -174,7 +174,7 @@
 								bind:value={currency}
 								options={currencyOptions}
 								aria-label="Currency"
-								class="w-[92px] rounded-l-none border-l-0"
+								class="w-[120px] rounded-l-none border-l-0"
 							/>
 						</div>
 					</div>

@@ -27,9 +27,23 @@ export async function fetchJson<T>(
 	const fetchFn: FetchLike = init?.fetch ?? fetch;
 	const { fetch: _fetch, ...requestInit } = init ?? {};
 
-	const response = await fetchFn(input, requestInit);
+	// Ensure Content-Type is set for requests with a body
+	const headers = new Headers(requestInit.headers);
+	if (requestInit.body && !headers.has('Content-Type')) {
+		headers.set('Content-Type', 'application/json');
+	}
+
+	const response = await fetchFn(input, {
+		...requestInit,
+		headers
+	});
+
 	if (!response.ok) {
-		throw new ApiError(response.status, `Request failed (${response.status})`, await safeReadText(response));
+		throw new ApiError(
+			response.status,
+			`Request failed (${response.status})`,
+			await safeReadText(response)
+		);
 	}
 	return (await response.json()) as T;
 }

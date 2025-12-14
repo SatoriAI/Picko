@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     cors_origins: str
 
     # Email Service
-    sender: str
+    email_from: str
     resend_api_key: str
 
 
