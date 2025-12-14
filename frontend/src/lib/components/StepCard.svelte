@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { darkMode } from '$lib/stores/theme';
-
 	interface Props {
 		step: number;
 		title: string;
@@ -18,9 +16,7 @@
 </script>
 
 <article
-	class="flex items-start gap-4 rounded-2xl border p-5 shadow-sm transition-all hover:shadow-md {$darkMode
-		? 'border-slate-700/50 bg-slate-800/50'
-		: 'border-slate-900/5 bg-white'}"
+	class="flex items-start gap-4 rounded-2xl border border-slate-900/5 bg-white p-5 shadow-sm transition-all hover:shadow-md dark:border-slate-700/50 dark:bg-slate-800/50"
 >
 	<div
 		class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-lg font-bold text-white shadow-md {colorClasses[
@@ -30,10 +26,10 @@
 		{step}
 	</div>
 	<div>
-		<h3 class="mb-1 text-base font-semibold {$darkMode ? 'text-white' : 'text-slate-800'}">
+		<h3 class="mb-1 text-base font-semibold text-slate-800 dark:text-white">
 			{title}
 		</h3>
-		<p class="text-sm leading-relaxed {$darkMode ? 'text-slate-400' : 'text-slate-500'}">
+		<p class="text-sm leading-relaxed text-slate-500 dark:text-slate-400">
 			{description}
 		</p>
 	</div>

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { darkMode } from '$lib/stores/theme';
 	import type { Snippet } from 'svelte';
 
 	interface Props {
@@ -11,12 +10,9 @@
 	let { for: forId, optional, children }: Props = $props();
 </script>
 
-<label
-	for={forId}
-	class="mb-1.5 block text-sm font-medium {$darkMode ? 'text-slate-300' : 'text-slate-600'}"
->
+<label for={forId} class="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
 	{@render children()}
 	{#if optional}
-		<span class="font-normal {$darkMode ? 'text-slate-500' : 'text-slate-400'}">{optional}</span>
+		<span class="font-normal text-slate-400 dark:text-slate-500">{optional}</span>
 	{/if}
 </label>

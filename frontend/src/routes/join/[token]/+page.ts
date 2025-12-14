@@ -17,11 +17,11 @@ export const load: PageLoad = async ({ params, fetch }) => {
 
 	if (!response.ok) {
 		if (response.status === 404) {
-			error(404, {
+			throw error(404, {
 				message: "Assignment not found. The link may be invalid or the draw hasn't happened yet."
 			});
 		}
-		error(response.status, { message: 'Failed to load assignment' });
+		throw error(response.status, { message: 'Failed to load assignment' });
 	}
 
 	const assignment: AssignmentData = await response.json();

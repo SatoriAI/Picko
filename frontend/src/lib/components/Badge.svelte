@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { darkMode } from '$lib/stores/theme';
 	import type { Snippet } from 'svelte';
 
 	interface Props {
@@ -12,9 +11,7 @@
 </script>
 
 <span
-	class="inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm font-medium shadow-sm transition-colors {$darkMode
-		? 'border-slate-700 bg-slate-800 text-slate-300'
-		: 'border-rose-500/15 bg-white text-slate-700'}"
+	class="inline-flex items-center gap-1.5 rounded-full border border-rose-500/15 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
 >
 	<span class="text-xs {iconColor}">{icon}</span>
 	{@render children()}

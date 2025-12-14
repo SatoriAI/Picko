@@ -1,8 +1,8 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
-	import { darkMode } from '$lib/stores/theme';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { fetchJson } from '$lib/api/client';
 	import {
 		PageLayout,
 		Card,
@@ -10,6 +10,7 @@
 		StepCard,
 		Input,
 		TextArea,
+		Select,
 		FormLabel,
 		Button,
 		Chip
@@ -21,6 +22,13 @@
 	let eventDate = $state('');
 	let participantsInput = $state('');
 	let isSubmitting = $state(false);
+
+	// Currency options for select
+	const currencyOptions: Array<{ value: 'PLN' | 'USD' | 'EUR'; label: string }> = [
+		{ value: 'PLN', label: 'PLN' },
+		{ value: 'USD', label: 'USD' },
+		{ value: 'EUR', label: 'EUR' }
+	];
 
 	// Derived array of parsed participant names
 	let participants = $derived(
@@ -45,9 +53,8 @@
 
 		isSubmitting = true;
 		try {
-			const response = await fetch('/api/event', {
+			const created = await fetchJson<{ id: number }>('/api/event', {
 				method: 'POST',
-				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
 					name: eventName.trim(),
 					max_amount: maxAmountValue,
@@ -57,17 +64,10 @@
 				})
 			});
 
-			if (!response.ok) {
-				console.error('Failed to create event', await response.text());
-				alert(m.validation_error());
-				return;
-			}
-
-			const created = (await response.json()) as { id: number };
 			await goto(resolve(`/event/${created.id}`));
 		} catch (err) {
 			console.error('Create event request failed', err);
-			alert('Failed to create event. Please check the console/network tab.');
+			alert(m.validation_error());
 		} finally {
 			isSubmitting = false;
 		}
@@ -106,13 +106,11 @@
 	<section class="py-8 sm:py-12">
 		<div class="mx-auto max-w-3xl text-center">
 			<h1
-				class="mb-4 text-4xl font-bold leading-tight tracking-tight sm:text-5xl {$darkMode
-					? 'text-white'
-					: 'text-slate-800'}"
+				class="mb-4 text-4xl font-bold leading-tight tracking-tight text-slate-800 sm:text-5xl dark:text-white"
 			>
 				{m.tagline()}
 			</h1>
-			<p class="mx-auto mb-6 max-w-xl text-lg {$darkMode ? 'text-slate-400' : 'text-slate-500'}">
+			<p class="mx-auto mb-6 max-w-xl text-lg text-slate-500 dark:text-slate-400">
 				{m.hero_description()}
 			</p>
 			<div class="flex flex-wrap justify-center gap-2.5">
@@ -131,9 +129,7 @@
 			<!-- Steps (vertical on left) -->
 			<div>
 				<h2
-					class="mb-6 text-xl font-bold tracking-tight lg:text-2xl {$darkMode
-						? 'text-white'
-						: 'text-slate-800'}"
+					class="mb-6 text-xl font-bold tracking-tight text-slate-800 lg:text-2xl dark:text-white"
 				>
 					{m.how_it_works_title()}
 				</h2>
@@ -146,11 +142,7 @@
 
 			<!-- Form Card (on right) -->
 			<Card>
-				<h2
-					class="mb-6 text-center text-xl font-semibold {$darkMode
-						? 'text-white'
-						: 'text-slate-800'}"
-				>
+				<h2 class="mb-6 text-center text-xl font-semibold text-slate-800 dark:text-white">
 					{m.form_title()}
 				</h2>
 				<form
@@ -177,18 +169,13 @@
 								min="1"
 								class="no-number-spin rounded-r-none border-r-0"
 							/>
-							<select
+							<Select
 								id="currency"
 								bind:value={currency}
+								options={currencyOptions}
 								aria-label="Currency"
-								class="w-[92px] cursor-pointer rounded-l-none rounded-r-xl border-[1.5px] border-l-0 px-3 py-3 text-base font-medium transition-all focus:border-rose-500 focus:ring-[3px] focus:ring-rose-500/10 focus:outline-none {$darkMode
-									? 'border-slate-600 bg-slate-700/50 text-white focus:bg-slate-700'
-									: 'border-slate-200 bg-slate-50 text-slate-800 focus:bg-white'}"
-							>
-								<option value="PLN">PLN</option>
-								<option value="USD">USD</option>
-								<option value="EUR">EUR</option>
-							</select>
+								class="w-[92px] rounded-l-none border-l-0"
+							/>
 						</div>
 					</div>
 
@@ -206,17 +193,13 @@
 							bind:value={participantsInput}
 							placeholder={m.placeholder_participants()}
 						/>
-						<span class="mt-1.5 block text-xs {$darkMode ? 'text-slate-500' : 'text-slate-400'}">
+						<span class="mt-1.5 block text-xs text-slate-400 dark:text-slate-500">
 							{m.participants_hint()}
 						</span>
 
 						{#if participants.length > 0}
 							<div class="mt-3">
-								<span
-									class="mb-2 block text-xs font-medium {$darkMode
-										? 'text-slate-400'
-										: 'text-slate-500'}"
-								>
+								<span class="mb-2 block text-xs font-medium text-slate-500 dark:text-slate-400">
 									{m.participants_count({ count: participants.length })}
 								</span>
 								<div class="flex flex-wrap gap-2">
@@ -235,14 +218,10 @@
 					</Button>
 				</form>
 
-				<div
-					class="my-5 flex items-center gap-4 text-sm {$darkMode
-						? 'text-slate-500'
-						: 'text-slate-400'}"
-				>
-					<span class="h-px flex-1 {$darkMode ? 'bg-slate-700' : 'bg-slate-200'}"></span>
+				<div class="my-5 flex items-center gap-4 text-sm text-slate-400 dark:text-slate-500">
+					<span class="h-px flex-1 bg-slate-200 dark:bg-slate-700"></span>
 					<span>{m.or_separator()}</span>
-					<span class="h-px flex-1 {$darkMode ? 'bg-slate-700' : 'bg-slate-200'}"></span>
+					<span class="h-px flex-1 bg-slate-200 dark:bg-slate-700"></span>
 				</div>
 
 				<Button variant="secondary" onclick={handleDemo}>{m.button_demo()}</Button>

@@ -2,6 +2,9 @@
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
+/* Tailwind v4: enable class-based dark mode via `html.dark` */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Chip component styles */
 .chip {
 	display: inline-flex;
@@ -16,7 +19,7 @@
 	border-radius: 9999px;
 }
 
-.chip--dark {
+.dark .chip {
 	color: #cbd5e1;
 	background-color: #334155;
 	border-color: #475569;

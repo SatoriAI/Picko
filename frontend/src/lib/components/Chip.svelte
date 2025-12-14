@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { darkMode } from '$lib/stores/theme';
 	import type { Snippet } from 'svelte';
 
 	interface Props {
@@ -12,7 +11,7 @@
 </script>
 
 <span
-	class="chip {$darkMode ? 'chip--dark' : ''} {animated ? 'chip--animated' : ''}"
+	class="chip {animated ? 'chip--animated' : ''}"
 	style={animated ? `animation-delay: ${delay}ms` : undefined}
 >
 	{@render children()}

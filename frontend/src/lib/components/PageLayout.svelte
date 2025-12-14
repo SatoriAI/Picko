@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { darkMode } from '$lib/stores/theme';
 	import Header from './Header.svelte';
 	import Footer from './Footer.svelte';
 	import type { Snippet } from 'svelte';
@@ -13,9 +12,7 @@
 </script>
 
 <div
-	class="min-h-screen font-[Outfit,system-ui,sans-serif] transition-colors duration-300 {$darkMode
-		? 'bg-slate-900 text-slate-100'
-		: 'bg-gradient-to-br from-amber-50 via-blue-50 to-orange-50 text-slate-800'}"
+	class="min-h-screen bg-gradient-to-br from-amber-50 via-blue-50 to-orange-50 font-[Outfit,system-ui,sans-serif] text-slate-800 transition-colors duration-300 dark:bg-none dark:bg-slate-900 dark:text-slate-100"
 >
 	<Header isLink={isHeaderLink} />
 

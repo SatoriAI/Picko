@@ -8,5 +8,9 @@ class Settings(BaseSettings):
     database_url: str
     cors_origins: str
 
+    # Email Service
+    sender: str
+    resend_api_key: str
+
 
 settings = Settings()

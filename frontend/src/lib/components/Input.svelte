@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { darkMode } from '$lib/stores/theme';
 	import { getFormFieldClasses } from './formFieldClasses';
 
 	interface Props {
@@ -20,7 +19,7 @@
 		class: className = ''
 	}: Props = $props();
 
-	let fieldClasses = $derived(getFormFieldClasses($darkMode, className));
+	let fieldClasses = $derived(getFormFieldClasses(className));
 </script>
 
 <input {type} {id} bind:value {placeholder} {min} class={fieldClasses} />

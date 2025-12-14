@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { darkMode } from '$lib/stores/theme';
 	import { getFormFieldClasses } from './formFieldClasses';
 
 	interface Props {
@@ -18,7 +17,7 @@
 		class: className = ''
 	}: Props = $props();
 
-	let fieldClasses = $derived(getFormFieldClasses($darkMode, `resize-none ${className}`));
+	let fieldClasses = $derived(getFormFieldClasses(`resize-none ${className}`));
 </script>
 
 <textarea {id} bind:value {placeholder} {rows} class={fieldClasses}></textarea>

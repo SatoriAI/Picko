@@ -2,8 +2,9 @@ import type { PageLoad } from './$types';
 import { error } from '@sveltejs/kit';
 
 export interface ParticipantData {
+	id: number;
 	name: string;
-	token: string;
+	shareToken: string;
 	email?: string | null;
 }
 
@@ -55,9 +56,10 @@ export const load: PageLoad = async ({ params, fetch }) => {
 		date: backendEvent.date,
 		currency: backendEvent.currency,
 		participants: backendEvent.participants.map((p) => ({
+			id: p.id,
 			name: p.name,
 			email: p.email,
-			token: p.reveal_token ?? String(p.id)
+			shareToken: p.reveal_token ?? String(p.id)
 		})),
 		drawComplete: hasAssignments,
 		assignments: null
