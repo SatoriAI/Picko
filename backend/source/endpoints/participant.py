@@ -6,19 +6,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from source.database.connection import get_session
-from source.database.operations import (
-    execute_draw,
-    get_event,
-    get_participant_by_access_token,
-    update_participant,
-)
+from source.database.operations import execute_draw, get_event, get_participant_by_access_token, update_participant
 
 router = APIRouter(prefix="/participant", tags=["Participant"])
-
-
-# ============================================================================
-# Request/Response Models
-# ============================================================================
 
 
 class ParticipantUpdate(BaseModel):
@@ -49,66 +39,29 @@ class AssignmentInfo(BaseModel):
 
 
 class MyStatusResponse(BaseModel):
-    """Response for participant's personal status page."""
-
     participant_name: str
     event: EventInfo
     assignment: AssignmentInfo | None  # None if draw hasn't happened yet
 
 
-# ============================================================================
-# Endpoints
-# ============================================================================
-
-
-@router.get(
-    "/me/{access_token}",
-    status_code=status.HTTP_200_OK,
-    response_model=MyStatusResponse,
-)
-async def get_my_status(
-    access_token: str,
-    session: AsyncSession = Depends(get_session),
-) -> MyStatusResponse:
-    """Get participant's personal status including their assignment after the draw."""
-    participant = await get_participant_by_access_token(
-        session, access_token=access_token
-    )
-
-    if participant is None:
+@router.get("/me/{access_token}", status_code=status.HTTP_200_OK, response_model=MyStatusResponse)
+async def get(access_token: str, session: AsyncSession = Depends(get_session)) -> MyStatusResponse:
+    if (participant := await get_participant_by_access_token(session, access_token=access_token)) is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Participant not found. The link may be invalid.",
+            status_code=status.HTTP_404_NOT_FOUND, detail="Participant not found. The link may be invalid."
         )
 
-    # IMPORTANT:
-    # In async SQLAlchemy, accessing a not-yet-loaded relationship triggers a lazy
-    # load which raises `MissingGreenlet`. We therefore fetch the Event with its
-    # participants eagerly loaded before calling `len(event.participants)`.
-    event = await get_event(session, event_id=participant.event_id)
-    if event is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Event not found for participant.",
-        )
+    if (event := await get_event(session, event_id=participant.event_id)) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found for participant.")
 
     # Auto-trigger draw if deadline has passed and draw not yet complete
-    now = datetime.datetime.now(datetime.timezone.utc)
-    if (
-        not event.is_draw_complete
-        and now > event.registration_deadline
-        and len(event.participants) >= 2
-    ):
+    now = datetime.datetime.now(datetime.UTC)
+    if not event.is_draw_complete and now > event.registration_deadline and len(event.participants) >= 2:
         await execute_draw(session, event)
+
         # Reload participant to get the new assignment
-        participant = await get_participant_by_access_token(
-            session, access_token=access_token
-        )
-        if participant is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Participant not found after draw.",
-            )
+        if (participant := await get_participant_by_access_token(session, access_token=access_token)) is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Participant not found after draw.")
         event = participant.event
 
     # Build assignment info if draw is complete
@@ -135,13 +88,9 @@ async def get_my_status(
     )
 
 
-@router.patch(
-    "/{participant_id}", status_code=status.HTTP_200_OK, response_model=ParticipantRead
-)
-async def patch_participant(
-    participant_id: int,
-    payload: ParticipantUpdate,
-    session: AsyncSession = Depends(get_session),
+@router.patch("/{participant_id}", status_code=status.HTTP_200_OK, response_model=ParticipantRead)
+async def patch(
+    participant_id: int, payload: ParticipantUpdate, session: AsyncSession = Depends(get_session)
 ) -> ParticipantRead:
     try:
         participant = await update_participant(
@@ -156,8 +105,6 @@ async def patch_participant(
         ) from exc
 
     if participant is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Participant not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Participant not found")
 
     return participant

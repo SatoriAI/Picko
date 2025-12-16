@@ -28,18 +28,9 @@ class AssignmentReveal(BaseModel):
     event: EventInfo
 
 
-@router.get(
-    "/reveal/{token}",
-    status_code=status.HTTP_200_OK,
-    response_model=AssignmentReveal,
-)
-async def reveal_assignment(
-    token: str,
-    session: AsyncSession = Depends(get_session),
-) -> AssignmentReveal:
-    if (
-        assignment := await get_assignment_by_token(session, reveal_token=token)
-    ) is None:
+@router.get("/reveal/{token}", status_code=status.HTTP_200_OK, response_model=AssignmentReveal)
+async def get(token: str, session: AsyncSession = Depends(get_session)) -> AssignmentReveal:
+    if not (assignment := await get_assignment_by_token(session, reveal_token=token)):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Assignment not found. The link may be invalid or expired.",

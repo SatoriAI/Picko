@@ -34,9 +34,7 @@ async def fixture_engine() -> AsyncGenerator[AsyncEngine, None]:
 def fixture_app(engine: AsyncEngine) -> FastAPI:
     application = create_app()
 
-    session_maker = async_sessionmaker(
-        bind=engine, expire_on_commit=False, autoflush=False
-    )
+    session_maker = async_sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
 
     async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
         async with session_maker() as session:
@@ -64,17 +62,13 @@ async def setup_database(engine: AsyncEngine) -> AsyncGenerator[None]:
     yield
 
     async with engine.begin() as conn:
-        for table in reversed(
-            Base.metadata.sorted_tables
-        ):  # Delete all data from tables instead of recreating schema
+        for table in reversed(Base.metadata.sorted_tables):  # Delete all data from tables instead of recreating schema
             await conn.execute(delete(table))
 
 
 @pytest.fixture(name="db_session")
 async def fixture_db_session(engine: AsyncEngine) -> AsyncGenerator[AsyncSession, None]:
-    session_maker = async_sessionmaker(
-        bind=engine, expire_on_commit=False, autoflush=False
-    )
+    session_maker = async_sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
 
     async with session_maker() as session:
         try:

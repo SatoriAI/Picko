@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,9 +13,7 @@ async def get_event(session: AsyncSession, *, event_id: int) -> Event | None:
     result = await session.execute(
         select(Event)
         .options(
-            selectinload(Event.participants).selectinload(
-                Participant.given_assignments
-            ),
+            selectinload(Event.participants).selectinload(Participant.given_assignments),
             selectinload(Event.draws),
         )
         .where(Event.id == event_id)
@@ -23,16 +21,11 @@ async def get_event(session: AsyncSession, *, event_id: int) -> Event | None:
     return result.scalar_one_or_none()
 
 
-async def get_event_by_registration_token(
-    session: AsyncSession, *, registration_token: str
-) -> Event | None:
-    """Get event by its shareable registration token."""
+async def get_event_by_registration_token(session: AsyncSession, *, registration_token: str) -> Event | None:
     result = await session.execute(
         select(Event)
         .options(
-            selectinload(Event.participants).selectinload(
-                Participant.given_assignments
-            ),
+            selectinload(Event.participants).selectinload(Participant.given_assignments),
             selectinload(Event.draws),
         )
         .where(Event.registration_token == registration_token)
@@ -49,7 +42,6 @@ async def create_event(
     date=None,
     currency: str | None = None,
 ) -> Event:
-    """Create an event without participants (they self-register later)."""
     event = Event(
         name=name,
         max_amount=max_amount,
@@ -67,9 +59,7 @@ async def create_event(
     result = await session.execute(
         select(Event)
         .options(
-            selectinload(Event.participants).selectinload(
-                Participant.given_assignments
-            ),
+            selectinload(Event.participants).selectinload(Participant.given_assignments),
             selectinload(Event.draws),
         )
         .where(Event.id == event.id)
@@ -86,7 +76,6 @@ async def register_participant(
     language: str = "en",
     wishlist: str | None = None,
 ) -> Participant:
-    """Register a new participant to an event."""
     participant = Participant(
         event_id=event_id,
         name=name,
@@ -102,18 +91,10 @@ async def register_participant(
 
 
 async def execute_draw(session: AsyncSession, event: Event) -> None:
-    """Execute the Secret Santa draw for an event."""
     if event.is_draw_complete:
         return  # Already done
 
-    # IMPORTANT:
-    # In async SQLAlchemy, relying on lazy-loading relationships can raise
-    # `MissingGreenlet`. Always fetch participants explicitly for the draw.
-    result = await session.execute(
-        select(Participant)
-        .where(Participant.event_id == event.id)
-        .order_by(Participant.id)
-    )
+    result = await session.execute(select(Participant).where(Participant.event_id == event.id).order_by(Participant.id))
     participants = list(result.scalars().all())
 
     if len(participants) < 2:
@@ -140,25 +121,13 @@ async def execute_draw(session: AsyncSession, event: Event) -> None:
     await session.commit()
 
 
-async def get_event_and_maybe_draw(
-    session: AsyncSession, *, event_id: int
-) -> Event | None:
-    """
-    Get event and automatically execute draw if:
-    - Deadline has passed
-    - Draw hasn't been executed yet
-    - There are at least 2 participants
-    """
+async def get_event_and_maybe_draw(session: AsyncSession, *, event_id: int) -> Event | None:
     event = await get_event(session, event_id=event_id)
     if event is None:
         return None
 
-    now = datetime.now(timezone.utc)
-    if (
-        not event.is_draw_complete
-        and now > event.registration_deadline
-        and len(event.participants) >= 2
-    ):
+    now = datetime.now(UTC)
+    if not event.is_draw_complete and now > event.registration_deadline and len(event.participants) >= 2:
         await execute_draw(session, event)
         # Reload to get the new assignments
         event = await get_event(session, event_id=event_id)
@@ -166,15 +135,11 @@ async def get_event_and_maybe_draw(
     return event
 
 
-async def get_event_participants_with_assignments(
-    session: AsyncSession, *, event_id: int
-) -> list[Participant]:
+async def get_event_participants_with_assignments(session: AsyncSession, *, event_id: int) -> list[Participant]:
     result = await session.execute(
         select(Participant)
         .options(
-            selectinload(Participant.given_assignments).selectinload(
-                Assignment.receiver
-            ),
+            selectinload(Participant.given_assignments).selectinload(Assignment.receiver),
             selectinload(Participant.event),
         )
         .where(Participant.event_id == event_id)
@@ -182,27 +147,19 @@ async def get_event_participants_with_assignments(
     return list(result.scalars().all())
 
 
-async def update_participant(
-    session: AsyncSession,
-    *,
-    participant_id: int,
-    email: str | None,
-) -> Participant | None:
-    participant = await session.get(Participant, participant_id)
-    if participant is None:
+async def update_participant(session: AsyncSession, *, participant_id: int, email: str | None) -> Participant | None:
+    if (participant := await session.get(Participant, participant_id)) is None:
         return None
 
     participant.email = email
+
     await session.commit()
     await session.refresh(participant)
+
     return participant
 
 
-async def get_assignment_by_token(
-    session: AsyncSession,
-    *,
-    reveal_token: str,
-) -> Assignment | None:
+async def get_assignment_by_token(session: AsyncSession, *, reveal_token: str) -> Assignment | None:
     result = await session.execute(
         select(Assignment)
         .options(
@@ -219,14 +176,11 @@ async def get_participant_by_access_token(
     *,
     access_token: str,
 ) -> Participant | None:
-    """Get a participant by their personal access token, with event and assignment info."""
     result = await session.execute(
         select(Participant)
         .options(
             selectinload(Participant.event),
-            selectinload(Participant.given_assignments).selectinload(
-                Assignment.receiver
-            ),
+            selectinload(Participant.given_assignments).selectinload(Assignment.receiver),
         )
         .where(Participant.access_token == access_token)
     )

@@ -20,9 +20,7 @@ class Base(DeclarativeBase):
 
 class Event(Base):
     __tablename__ = "event"
-    __table_args__ = (
-        CheckConstraint("max_amount > 0", name="ck_event_max_amount_positive"),
-    )
+    __table_args__ = (CheckConstraint("max_amount > 0", name="ck_event_max_amount_positive"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -33,37 +31,23 @@ class Event(Base):
     currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
 
     # Registration
-    registration_deadline: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    registration_token: Mapped[str] = mapped_column(
-        String(64), nullable=False, unique=True
-    )
-    is_draw_complete: Mapped[bool] = mapped_column(
-        Boolean(), default=False, nullable=False
-    )
+    registration_deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    registration_token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    is_draw_complete: Mapped[bool] = mapped_column(Boolean(), default=False, nullable=False)
 
     # SQL Alchemy Relations
-    participants: Mapped[list["Participant"]] = relationship(
-        back_populates="event", cascade="all, delete-orphan"
-    )
-    draws: Mapped[list["Draw"]] = relationship(
-        back_populates="event", cascade="all, delete-orphan"
-    )
+    participants: Mapped[list["Participant"]] = relationship(back_populates="event", cascade="all, delete-orphan")
+    draws: Mapped[list["Draw"]] = relationship(back_populates="event", cascade="all, delete-orphan")
 
 
 class Participant(Base):
     __tablename__ = "participant"
-    __table_args__ = (
-        UniqueConstraint("event_id", "name", name="uq_participant_event_id_name"),
-    )
+    __table_args__ = (UniqueConstraint("event_id", "name", name="uq_participant_event_id_name"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
     # Relations
-    event_id: Mapped[int] = mapped_column(
-        ForeignKey("event.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+    event_id: Mapped[int] = mapped_column(ForeignKey("event.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # Details
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -93,9 +77,7 @@ class Draw(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    event_id: Mapped[int] = mapped_column(
-        ForeignKey("event.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+    event_id: Mapped[int] = mapped_column(ForeignKey("event.id", ondelete="CASCADE"), nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -104,9 +86,7 @@ class Draw(Base):
 
     # SQL Alchemy Relations
     event: Mapped["Event"] = relationship(back_populates="draws")
-    assignments: Mapped[list["Assignment"]] = relationship(
-        back_populates="draw", cascade="all, delete-orphan"
-    )
+    assignments: Mapped[list["Assignment"]] = relationship(back_populates="draw", cascade="all, delete-orphan")
 
 
 class Assignment(Base):
@@ -119,12 +99,8 @@ class Assignment(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    draw_id: Mapped[int] = mapped_column(
-        ForeignKey("draw.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    giver_id: Mapped[int] = mapped_column(
-        ForeignKey("participant.id", ondelete="CASCADE"), nullable=False, index=True
-    )
+    draw_id: Mapped[int] = mapped_column(ForeignKey("draw.id", ondelete="CASCADE"), nullable=False, index=True)
+    giver_id: Mapped[int] = mapped_column(ForeignKey("participant.id", ondelete="CASCADE"), nullable=False, index=True)
     receiver_id: Mapped[int] = mapped_column(
         ForeignKey("participant.id", ondelete="CASCADE"), nullable=False, index=True
     )

@@ -1,11 +1,13 @@
 import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from structlog import get_logger
 
 from source.database.connection import get_session
+from source.database.models import Event
 from source.database.operations import (
     create_event,
     get_event_and_maybe_draw,
@@ -13,37 +15,20 @@ from source.database.operations import (
     get_event_participants_with_assignments,
     register_participant,
 )
-from source.settings import settings
+from source.settings import CurrencySelection, settings
 from source.utils.postman import PostMan, PostManConfigError
-
-from structlog import get_logger
 
 logger = get_logger()
 
 router = APIRouter(prefix="/event", tags=["Event"])
 
 
-# ============================================================================
-# Request/Response Models
-# ============================================================================
-
-
 class EventCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     max_amount: int | None = Field(default=None, gt=0)
     date: datetime.date | None = None
-    currency: str | None = Field(default=None, min_length=3, max_length=3)
+    currency: CurrencySelection | None
     registration_deadline: datetime.datetime
-
-    @field_validator("currency")
-    @classmethod
-    def normalize_currency(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        value = value.strip()
-        if not (value := value.strip()):
-            return None
-        return value.upper()
 
 
 class ParticipantRead(BaseModel):
@@ -96,12 +81,7 @@ class SendEmailsResponse(BaseModel):
     sent_to: list[str]
 
 
-# ============================================================================
-# Helper Functions
-# ============================================================================
-
-
-def build_event_response(event) -> EventRead:
+def build_event_response(event: Event) -> EventRead:
     participants = []
     for p in event.participants:
         reveal_token = None
@@ -130,27 +110,9 @@ def build_event_response(event) -> EventRead:
     )
 
 
-# ============================================================================
-# Event Endpoints
-# ============================================================================
-
-
-@router.get("/{event_id}", status_code=status.HTTP_200_OK, response_model=EventRead)
-async def get(event_id: int, session: AsyncSession = Depends(get_session)) -> EventRead:
-    """Get event by ID. Automatically triggers draw if deadline has passed."""
-    event = await get_event_and_maybe_draw(session, event_id=event_id)
-    if event is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Event not found"
-        )
-    return build_event_response(event)
-
-
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=EventRead)
-async def create(
-    payload: EventCreate, session: AsyncSession = Depends(get_session)
-) -> EventRead:
-    """Create a new event. Participants self-register via the registration token."""
+async def create(payload: EventCreate, session: AsyncSession = Depends(get_session)) -> EventRead:
+    logger.info(f"Creating event {payload.name}")
     try:
         event = await create_event(
             session,
@@ -169,50 +131,24 @@ async def create(
     return build_event_response(event)
 
 
-# ============================================================================
-# Registration Endpoints
-# ============================================================================
-
-
-@router.get(
-    "/register/{token}", status_code=status.HTTP_200_OK, response_model=EventRead
-)
-async def get_event_for_registration(
-    token: str, session: AsyncSession = Depends(get_session)
-) -> EventRead:
-    """Get event info by registration token (for the registration page)."""
-    event = await get_event_by_registration_token(session, registration_token=token)
-    if event is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Event not found"
-        )
+@router.get("/{event_id}", status_code=status.HTTP_200_OK, response_model=EventRead)
+async def get(event_id: int, session: AsyncSession = Depends(get_session)) -> EventRead:
+    if (event := await get_event_and_maybe_draw(session, event_id=event_id)) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
     return build_event_response(event)
 
 
-@router.post(
-    "/register/{token}",
-    status_code=status.HTTP_201_CREATED,
-    response_model=ParticipantRegistered,
-)
+@router.post("/register/{token}", status_code=status.HTTP_201_CREATED, response_model=ParticipantRegistered)
 async def register_for_event(
-    token: str,
-    payload: ParticipantRegister,
-    session: AsyncSession = Depends(get_session),
+    token: str, payload: ParticipantRegister, session: AsyncSession = Depends(get_session)
 ) -> ParticipantRegistered:
-    """Register as a participant for an event."""
-    event = await get_event_by_registration_token(session, registration_token=token)
-    if event is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Event not found"
-        )
+    if (event := await get_event_by_registration_token(session, registration_token=token)) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 
     # Check if registration deadline has passed
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     if now > event.registration_deadline:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Registration deadline has passed",
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Registration deadline has passed")
 
     try:
         participant = await register_participant(
@@ -240,31 +176,19 @@ async def register_for_event(
     )
 
 
-# ============================================================================
-# Email Endpoints
-# ============================================================================
+@router.get("/register/{token}", status_code=status.HTTP_200_OK, response_model=EventRead)
+async def get_event_for_registration(token: str, session: AsyncSession = Depends(get_session)) -> EventRead:
+    if (event := await get_event_by_registration_token(session, registration_token=token)) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    return build_event_response(event)
 
 
-@router.post(
-    "/{event_id}/send-emails",
-    status_code=status.HTTP_200_OK,
-    response_model=SendEmailsResponse,
-)
+@router.post("/{event_id}/send-emails", status_code=status.HTTP_200_OK, response_model=SendEmailsResponse)
 async def send_emails(
-    event_id: int,
-    request: Request,
-    session: AsyncSession = Depends(get_session),
+    event_id: int, request: Request, session: AsyncSession = Depends(get_session)
 ) -> SendEmailsResponse:
-    """Send Secret Santa assignment emails to all participants with email addresses."""
-    participants = await get_event_participants_with_assignments(
-        session, event_id=event_id
-    )
-
-    if not participants:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Event not found or has no participants",
-        )
+    if not (participants := await get_event_participants_with_assignments(session, event_id=event_id)):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found or has no participants")
 
     try:
         postman = PostMan(settings)
@@ -276,15 +200,7 @@ async def send_emails(
         ) from exc
 
     sent_to, skipped_count = await postman.send_event_emails(
-        participants=participants,
-        event_id=event_id,
-        request=request,
-        cors_origins=settings.cors_origins,
-        app_name="Picko",
+        participants=participants, event_id=event_id, request=request
     )
 
-    return SendEmailsResponse(
-        sent_count=len(sent_to),
-        skipped_count=skipped_count,
-        sent_to=sent_to,
-    )
+    return SendEmailsResponse(sent_count=len(sent_to), skipped_count=skipped_count, sent_to=sent_to)

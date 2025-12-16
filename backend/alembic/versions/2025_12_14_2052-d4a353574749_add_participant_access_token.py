@@ -6,25 +6,23 @@ Create Date: 2025-12-14 20:52:39.732901
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "d4a353574749"
-down_revision: Union[str, Sequence[str], None] = "aa17f25c1884"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "aa17f25c1884"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
     """Upgrade schema."""
     # Add column as nullable first
-    op.add_column(
-        "participant", sa.Column("access_token", sa.String(length=64), nullable=True)
-    )
+    op.add_column("participant", sa.Column("access_token", sa.String(length=64), nullable=True))
 
     # Backfill existing participants with unique tokens
     op.execute("""
@@ -35,9 +33,7 @@ def upgrade() -> None:
 
     # Make non-nullable and add unique constraint
     op.alter_column("participant", "access_token", nullable=False)
-    op.create_unique_constraint(
-        "uq_participant_access_token", "participant", ["access_token"]
-    )
+    op.create_unique_constraint("uq_participant_access_token", "participant", ["access_token"])
 
 
 def downgrade() -> None:

@@ -6,17 +6,17 @@ Create Date: 2025-12-14 12:40:22.761869
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "48a429ba019d"
-down_revision: Union[str, Sequence[str], None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -55,9 +55,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("event_id", "name", name="uq_participant_event_id_name"),
     )
-    op.create_index(
-        op.f("ix_participant_event_id"), "participant", ["event_id"], unique=False
-    )
+    op.create_index(op.f("ix_participant_event_id"), "participant", ["event_id"], unique=False)
     op.create_table(
         "assignment",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -68,23 +66,15 @@ def upgrade() -> None:
         sa.CheckConstraint("giver_id <> receiver_id", name="ck_assignment_not_self"),
         sa.ForeignKeyConstraint(["draw_id"], ["draw.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["giver_id"], ["participant.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["receiver_id"], ["participant.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["receiver_id"], ["participant.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("draw_id", "giver_id"),
         sa.UniqueConstraint("draw_id", "receiver_id"),
         sa.UniqueConstraint("reveal_token"),
     )
-    op.create_index(
-        op.f("ix_assignment_draw_id"), "assignment", ["draw_id"], unique=False
-    )
-    op.create_index(
-        op.f("ix_assignment_giver_id"), "assignment", ["giver_id"], unique=False
-    )
-    op.create_index(
-        op.f("ix_assignment_receiver_id"), "assignment", ["receiver_id"], unique=False
-    )
+    op.create_index(op.f("ix_assignment_draw_id"), "assignment", ["draw_id"], unique=False)
+    op.create_index(op.f("ix_assignment_giver_id"), "assignment", ["giver_id"], unique=False)
+    op.create_index(op.f("ix_assignment_receiver_id"), "assignment", ["receiver_id"], unique=False)
 
 
 def downgrade() -> None:
