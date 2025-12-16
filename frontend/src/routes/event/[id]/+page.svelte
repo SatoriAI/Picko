@@ -16,7 +16,7 @@
 		MailIcon,
 		ParticipantRow
 	} from '$lib/components';
-	import type { EventData, ParticipantData } from './+page';
+	import type { EventData } from './+page';
 
 	// Props from loader
 	let { data } = $props();
@@ -202,25 +202,6 @@
 					</div>
 				</div>
 
-				<div>
-					<span
-						class="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
-					>
-						{m.admin_participants_label()} ({event.participants.length})
-					</span>
-					{#if event.participants.length > 0}
-						<div class="flex flex-wrap gap-2">
-							{#each event.participants as participant (participant.id)}
-								<Chip>{participant.name}</Chip>
-							{/each}
-						</div>
-					{:else}
-						<p class="text-sm text-slate-500 dark:text-slate-400">
-							{m.no_participants_yet()}
-						</p>
-					{/if}
-				</div>
-
 				<!-- Status indicator -->
 				{#if event.isDrawComplete}
 					<div class="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 dark:bg-emerald-500/10">
@@ -231,13 +212,6 @@
 						</span>
 						<span class="text-sm font-medium text-emerald-700 dark:text-emerald-400">
 							{m.admin_draw_auto_complete()}
-						</span>
-					</div>
-				{:else}
-					<div class="flex items-center gap-2 rounded-lg bg-amber-50 p-3 dark:bg-amber-500/10">
-						<span class="text-xl">⏳</span>
-						<span class="text-sm font-medium text-amber-700 dark:text-amber-400">
-							{m.waiting_for_deadline()}
 						</span>
 					</div>
 				{/if}
@@ -263,13 +237,16 @@
 
 				<!-- Registration Link -->
 				<div class="mb-6 flex gap-2">
-					<Input id="registrationUrl" value={registrationUrl} readonly class="flex-1 font-mono text-sm" />
+					<Input
+						id="registrationUrl"
+						value={registrationUrl}
+						readonly
+						class="flex-1 font-mono text-sm"
+					/>
 					<Button
 						variant="outline"
 						onclick={copyRegistrationLink}
-						class={linkCopied.active
-							? 'border-emerald-500 bg-emerald-500/10 text-emerald-600'
-							: ''}
+						class={linkCopied.active ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600' : ''}
 					>
 						{#if linkCopied.active}
 							<CheckIcon class="h-4 w-4" />
@@ -349,7 +326,7 @@
 											{m.wishlist_label()}:
 										</span>
 										<div class="mt-1 flex flex-wrap gap-1">
-											{#each participant.wishlist.split(',').map((w) => w.trim()) as wish}
+											{#each participant.wishlist.split(',').map((w) => w.trim()) as wish (wish)}
 												{#if wish}
 													<span
 														class="rounded-full bg-white px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-600 dark:text-slate-300"

@@ -10,7 +10,11 @@ type FormatDateOptions = {
 	empty?: string;
 };
 
-export function formatDateLong(dateStr: string | null | undefined, locale: SupportedLocale, opts?: FormatDateOptions): string {
+export function formatDateLong(
+	dateStr: string | null | undefined,
+	locale: SupportedLocale,
+	opts?: FormatDateOptions
+): string {
 	if (!dateStr) return opts?.empty ?? '';
 	const date = new Date(dateStr);
 	if (!Number.isFinite(date.getTime())) return opts?.empty ?? '';

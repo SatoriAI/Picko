@@ -1,8 +1,8 @@
-"""initial
+"""empty message
 
-Revision ID: 48a429ba019d
+Revision ID: dd1fb5a9ac05
 Revises:
-Create Date: 2025-12-14 12:40:22.761869
+Create Date: 2025-12-16 15:31:19.883552
 
 """
 
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "48a429ba019d"
+revision: str = "dd1fb5a9ac05"
 down_revision: str | Sequence[str] | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
@@ -27,20 +27,19 @@ def upgrade() -> None:
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("date", sa.Date(), nullable=True),
         sa.Column("max_amount", sa.Integer(), nullable=True),
-        sa.Column("currency", sa.String(length=3), nullable=True),
+        sa.Column("currency", sa.Enum("EUR", "PLN", "USD", name="currencyselection"), nullable=True),
+        sa.Column("registration_deadline", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("registration_token", sa.String(length=64), nullable=False),
+        sa.Column("is_draw_complete", sa.Boolean(), nullable=False),
         sa.CheckConstraint("max_amount > 0", name="ck_event_max_amount_positive"),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("registration_token"),
     )
     op.create_table(
         "draw",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("event_id", sa.Integer(), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
         sa.ForeignKeyConstraint(["event_id"], ["event.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -51,8 +50,12 @@ def upgrade() -> None:
         sa.Column("event_id", sa.Integer(), nullable=False),
         sa.Column("name", sa.String(length=255), nullable=False),
         sa.Column("email", sa.String(length=255), nullable=True),
+        sa.Column("language", sa.Enum("EN", "PL", name="languageselection"), nullable=False),
+        sa.Column("wishlist", sa.String(length=1000), nullable=True),
+        sa.Column("access_token", sa.String(length=64), nullable=False),
         sa.ForeignKeyConstraint(["event_id"], ["event.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("access_token"),
         sa.UniqueConstraint("event_id", "name", name="uq_participant_event_id_name"),
     )
     op.create_index(op.f("ix_participant_event_id"), "participant", ["event_id"], unique=False)

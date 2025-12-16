@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from source.database.connection import get_session
 from source.database.operations import execute_draw, get_event, get_participant_by_access_token, update_participant
+from source.settings import CurrencySelection
 
 router = APIRouter(prefix="/participant", tags=["Participant"])
 
@@ -28,7 +29,7 @@ class EventInfo(BaseModel):
     name: str
     date: datetime.date | None
     max_amount: int | None
-    currency: str | None
+    currency: CurrencySelection | None
     registration_deadline: datetime.datetime
     is_draw_complete: bool
 

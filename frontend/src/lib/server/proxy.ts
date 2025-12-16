@@ -27,7 +27,10 @@ type ProxyToBackendOptions = {
 	forwardBody?: boolean;
 };
 
-export async function proxyToBackend(event: ProxyEvent, opts: ProxyToBackendOptions): Promise<Response> {
+export async function proxyToBackend(
+	event: ProxyEvent,
+	opts: ProxyToBackendOptions
+): Promise<Response> {
 	const url = joinUrl(getApiBaseUrl(), opts.path);
 	const method = opts.method.toUpperCase();
 	const forwardBody = opts.forwardBody ?? (method !== 'GET' && method !== 'HEAD');

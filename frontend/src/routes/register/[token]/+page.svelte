@@ -116,12 +116,12 @@
 				<Card class="mb-6 p-5">
 					<div class="grid gap-4 text-sm sm:grid-cols-2">
 						{#if event.date}
-							<div
-								class="flex items-center gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-700/50"
-							>
+							<div class="flex items-center gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-700/50">
 								<span class="text-lg">📅</span>
 								<div>
-									<span class="block text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
+									<span
+										class="block text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"
+									>
 										{m.join_event_date()}
 									</span>
 									<span class="font-semibold text-slate-700 dark:text-slate-200">
@@ -131,26 +131,27 @@
 							</div>
 						{/if}
 						{#if event.maxAmount}
-							<div
-								class="flex items-center gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-700/50"
-							>
+							<div class="flex items-center gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-700/50">
 								<span class="text-lg">💰</span>
 								<div>
-									<span class="block text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
+									<span
+										class="block text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"
+									>
 										{m.join_budget()}
 									</span>
 									<span class="font-semibold text-slate-700 dark:text-slate-200">
-										{event.maxAmount} {event.currency ?? 'PLN'}
+										{event.maxAmount}
+										{event.currency ?? 'PLN'}
 									</span>
 								</div>
 							</div>
 						{/if}
-						<div
-							class="flex items-center gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-700/50"
-						>
+						<div class="flex items-center gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-700/50">
 							<span class="text-lg">⏰</span>
 							<div>
-								<span class="block text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
+								<span
+									class="block text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"
+								>
 									{m.deadline_label()}
 								</span>
 								<span class="font-semibold text-slate-700 dark:text-slate-200">
@@ -158,12 +159,12 @@
 								</span>
 							</div>
 						</div>
-						<div
-							class="flex items-center gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-700/50"
-						>
+						<div class="flex items-center gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-700/50">
 							<span class="text-lg">👥</span>
 							<div>
-								<span class="block text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">
+								<span
+									class="block text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"
+								>
 									{m.admin_participants_label()}
 								</span>
 								<span class="font-semibold text-slate-700 dark:text-slate-200">

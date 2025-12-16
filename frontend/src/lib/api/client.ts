@@ -26,6 +26,7 @@ export async function fetchJson<T>(
 ): Promise<T> {
 	const fetchFn: FetchLike = init?.fetch ?? fetch;
 	const { fetch: _fetch, ...requestInit } = init ?? {};
+	void _fetch; // prevent unused variable error
 
 	// Ensure Content-Type is set for requests with a body
 	const headers = new Headers(requestInit.headers);

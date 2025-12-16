@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import * as m from '$lib/paraglide/messages';
 	import { getLocale } from '$lib/paraglide/runtime';
 	import { formatDateLong } from '$lib/utils/date';
@@ -11,6 +12,7 @@
 	let { data } = $props();
 	const status: MyStatusData = data;
 	const token: string = data.token;
+	void token; // prevent unused variable error
 
 	// Countdown state
 	let countdown = $state({ days: 0, hours: 0, minutes: 0, seconds: 0 });
@@ -255,7 +257,9 @@
 										{m.join_wishlist_title()}
 									</p>
 									<div class="flex flex-wrap justify-center gap-2">
-										{#each status.assignment.receiver_wishlist.split(',').map((w) => w.trim()) as wish}
+										{#each status.assignment.receiver_wishlist
+											.split(',')
+											.map((w) => w.trim()) as wish (wish)}
 											{#if wish}
 												<span
 													class="rounded-full bg-white px-3 py-1 text-sm text-slate-700 shadow-sm dark:bg-slate-600 dark:text-slate-200"
@@ -279,7 +283,8 @@
 
 						<!-- Link to event page -->
 						<a
-							href="/event/{status.event.id}"
+							href={resolve(`/event/${status.event.id}`)}
+							data-sveltekit-preload-data="hover"
 							class="inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
 						>
 							<span>👥</span>
@@ -305,42 +310,33 @@
 					</h1>
 				</div>
 
-				<Card class="mb-6 p-6">
-					<div class="mb-4 flex items-center gap-2 rounded-lg bg-amber-50 p-3 dark:bg-amber-500/10">
-						<span class="text-xl">⏳</span>
-						<span class="text-sm font-medium text-amber-700 dark:text-amber-400">
-							{m.my_waiting_for_draw()}
-						</span>
-					</div>
-
-					<!-- Countdown Timer -->
-					<div class="rounded-xl bg-gradient-to-br from-orange-500 to-pink-500 p-6 text-white">
-						<h3 class="mb-4 text-center text-sm font-medium uppercase tracking-wide opacity-90">
-							{m.countdown_title()}
-						</h3>
-						<div class="grid grid-cols-4 gap-2 text-center">
-							<div>
-								<div class="text-3xl font-bold sm:text-4xl">{countdown.days}</div>
-								<div class="text-xs uppercase opacity-75">{m.countdown_days()}</div>
-							</div>
-							<div>
-								<div class="text-3xl font-bold sm:text-4xl">{countdown.hours}</div>
-								<div class="text-xs uppercase opacity-75">{m.countdown_hours()}</div>
-							</div>
-							<div>
-								<div class="text-3xl font-bold sm:text-4xl">{countdown.minutes}</div>
-								<div class="text-xs uppercase opacity-75">{m.countdown_minutes()}</div>
-							</div>
-							<div>
-								<div class="text-3xl font-bold sm:text-4xl">{countdown.seconds}</div>
-								<div class="text-xs uppercase opacity-75">{m.countdown_seconds()}</div>
-							</div>
+				<!-- Countdown Timer -->
+				<div class="mb-6 rounded-xl bg-gradient-to-br from-orange-500 to-pink-500 p-6 text-white">
+					<h3 class="mb-4 text-center text-sm font-medium uppercase tracking-wide opacity-90">
+						{m.countdown_title()}
+					</h3>
+					<div class="grid grid-cols-4 gap-2 text-center">
+						<div>
+							<div class="text-3xl font-bold sm:text-4xl">{countdown.days}</div>
+							<div class="text-xs uppercase opacity-75">{m.countdown_days()}</div>
 						</div>
-						<p class="mt-4 text-center text-sm opacity-90">
-							{m.my_draw_will_happen()}
-						</p>
+						<div>
+							<div class="text-3xl font-bold sm:text-4xl">{countdown.hours}</div>
+							<div class="text-xs uppercase opacity-75">{m.countdown_hours()}</div>
+						</div>
+						<div>
+							<div class="text-3xl font-bold sm:text-4xl">{countdown.minutes}</div>
+							<div class="text-xs uppercase opacity-75">{m.countdown_minutes()}</div>
+						</div>
+						<div>
+							<div class="text-3xl font-bold sm:text-4xl">{countdown.seconds}</div>
+							<div class="text-xs uppercase opacity-75">{m.countdown_seconds()}</div>
+						</div>
 					</div>
-				</Card>
+					<p class="mt-4 text-center text-sm opacity-90">
+						{m.my_draw_will_happen()}
+					</p>
+				</div>
 
 				<!-- Action Cards -->
 				<div class="space-y-4">
@@ -387,7 +383,8 @@
 									{m.my_view_event_desc()}
 								</p>
 								<a
-									href="/event/{status.event.id}"
+									href={resolve(`/event/${status.event.id}`)}
+									data-sveltekit-preload-data="hover"
 									class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
 								>
 									{m.my_view_event_button()}

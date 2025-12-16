@@ -194,7 +194,9 @@
 									{m.join_wishlist_title()}
 								</p>
 								<div class="flex flex-wrap justify-center gap-2">
-									{#each assignment.receiver_wishlist.split(',').map((w) => w.trim()) as wish}
+									{#each assignment.receiver_wishlist
+										.split(',')
+										.map((w) => w.trim()) as wish (wish)}
 										{#if wish}
 											<span
 												class="rounded-full bg-white px-3 py-1 text-sm text-slate-700 shadow-sm dark:bg-slate-600 dark:text-slate-200"

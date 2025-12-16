@@ -5,6 +5,7 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
+    Enum,
     ForeignKey,
     Integer,
     String,
@@ -12,6 +13,8 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+from source.settings import CurrencySelection, LanguageSelection
 
 
 class Base(DeclarativeBase):
@@ -28,7 +31,7 @@ class Event(Base):
 
     # Expenses
     max_amount: Mapped[int | None] = mapped_column(Integer(), nullable=True)
-    currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
+    currency: Mapped[CurrencySelection | None] = mapped_column(Enum(CurrencySelection, length=3), nullable=True)
 
     # Registration
     registration_deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -52,7 +55,9 @@ class Participant(Base):
     # Details
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    language: Mapped[str] = mapped_column(String(5), default="en", nullable=False)
+    language: Mapped[LanguageSelection] = mapped_column(
+        Enum(LanguageSelection, length=2), default=LanguageSelection.EN, nullable=False
+    )
     wishlist: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 
     # Personal access token - allows participant to view their own assignment

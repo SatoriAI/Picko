@@ -9,8 +9,6 @@
 		name: string;
 		shareToken: string | null;
 		email?: string | null;
-		language?: string;
-		wishlist?: string | null;
 	}
 
 	interface Props {

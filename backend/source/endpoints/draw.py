@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from source.database.connection import get_session
 from source.database.operations import get_assignment_by_token
+from source.settings import CurrencySelection
 
 router = APIRouter(prefix="/draw", tags=["Draw"])
 
@@ -16,7 +17,7 @@ class EventInfo(BaseModel):
     name: str
     date: datetime.date | None
     max_amount: int | None
-    currency: str | None
+    currency: CurrencySelection | None
 
 
 class AssignmentReveal(BaseModel):

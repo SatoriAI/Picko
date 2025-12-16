@@ -15,7 +15,7 @@ from source.database.operations import (
     get_event_participants_with_assignments,
     register_participant,
 )
-from source.settings import CurrencySelection, settings
+from source.settings import CurrencySelection, LanguageSelection, settings
 from source.utils.postman import PostMan, PostManConfigError
 
 logger = get_logger()
@@ -37,7 +37,7 @@ class ParticipantRead(BaseModel):
     id: int
     name: str
     email: str | None
-    language: str
+    language: LanguageSelection
     wishlist: str | None
     reveal_token: str | None = None
 
@@ -49,7 +49,7 @@ class EventRead(BaseModel):
     name: str
     max_amount: int | None
     date: datetime.date | None
-    currency: str | None
+    currency: CurrencySelection | None
     registration_deadline: datetime.datetime
     registration_token: str
     is_draw_complete: bool
@@ -59,7 +59,7 @@ class EventRead(BaseModel):
 class ParticipantRegister(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     email: EmailStr | None = None
-    language: str = Field(default="en", pattern=r"^(en|pl)$")
+    language: LanguageSelection = LanguageSelection.EN
     wishlist: str | None = Field(default=None, max_length=1000)
 
 
@@ -69,7 +69,7 @@ class ParticipantRegistered(BaseModel):
     id: int
     name: str
     email: str | None
-    language: str
+    language: LanguageSelection
     wishlist: str | None
     event_id: int
     access_token: str

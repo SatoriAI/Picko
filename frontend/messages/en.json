@@ -107,7 +107,6 @@
 	"email_send_failed": "Failed to send emails. Please try again.",
 	"my_status_title": "My Secret Santa",
 	"my_greeting": "Hi {name}!",
-	"my_waiting_for_draw": "Waiting for the draw to happen...",
 	"my_draw_will_happen": "You'll see your assignment here when the time is up!",
 	"my_save_link_title": "Save this link!",
 	"my_save_link_desc": "Bookmark this page or copy the link to check your assignment later.",

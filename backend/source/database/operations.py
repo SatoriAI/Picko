@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from source.database.models import Assignment, Draw, Event, Participant
+from source.settings import CurrencySelection, LanguageSelection
 from source.utils.distribution import generate_derangement
 
 
@@ -40,7 +41,7 @@ async def create_event(
     registration_deadline: datetime,
     max_amount: int | None = None,
     date=None,
-    currency: str | None = None,
+    currency: CurrencySelection | None = None,
 ) -> Event:
     event = Event(
         name=name,
@@ -73,7 +74,7 @@ async def register_participant(
     event_id: int,
     name: str,
     email: str | None = None,
-    language: str = "en",
+    language: LanguageSelection = LanguageSelection.EN,
     wishlist: str | None = None,
 ) -> Participant:
     participant = Participant(
