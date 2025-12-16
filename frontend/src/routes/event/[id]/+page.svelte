@@ -86,7 +86,7 @@
 </script>
 
 <svelte:head>
-	<title>{event.name} - {m.app_name()}</title>
+	<title>{m.admin_event_dashboard()}: {event.name}</title>
 </svelte:head>
 
 <PageLayout isHeaderLink>

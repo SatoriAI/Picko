@@ -121,7 +121,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.my_status_title()} - {status.event.name}</title>
+	<title>{m.my_status_title()}: {status.event.name}</title>
 </svelte:head>
 
 <PageLayout isHeaderLink>
@@ -316,13 +316,6 @@
 								</div>
 							{/if}
 						</Card>
-
-						<!-- Next step CTA -->
-						<div class="mt-6 rounded-xl bg-gradient-to-r from-orange-500/10 to-pink-500/10 px-6 py-4 text-center dark:from-orange-500/20 dark:to-pink-500/20">
-							<p class="font-medium text-slate-700 dark:text-slate-200">
-								🛍️ {m.my_next_step()}
-							</p>
-						</div>
 
 						<!-- Secret reminder -->
 						<p

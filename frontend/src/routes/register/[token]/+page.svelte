@@ -79,7 +79,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.register_title()} - {event.name}</title>
+	<title>{m.register_title()}: {event.name}</title>
 </svelte:head>
 
 <PageLayout isHeaderLink>

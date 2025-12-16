@@ -45,3 +45,6 @@ frontend/project.inlang/cache/
 
 # PyCharm IDE
 .idea/
+
+# VS Code
+.vscode/

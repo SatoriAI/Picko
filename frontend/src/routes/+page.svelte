@@ -91,6 +91,10 @@
 	];
 </script>
 
+<svelte:head>
+	<title>{m.tagline()}</title>
+</svelte:head>
+
 <PageLayout>
 	<!-- Hero Section -->
 	<section class="py-8 sm:py-12">

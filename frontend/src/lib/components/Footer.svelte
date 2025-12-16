@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { GitHubIcon } from './icons';
+	import * as m from '$lib/paraglide/messages';
 </script>
 
 <footer
@@ -9,7 +10,7 @@
 		class="mx-auto flex max-w-5xl flex-col items-center gap-4 text-center sm:flex-row sm:justify-between sm:text-left"
 	>
 		<p class="text-sm text-slate-500">
-			© {new Date().getFullYear()} Created by Dawid Hanrahan
+			{m.footer_copyright({ year: String(new Date().getFullYear()), name: 'Dawid Hanrahan' })}
 		</p>
 		<div class="flex items-center gap-5">
 			<a

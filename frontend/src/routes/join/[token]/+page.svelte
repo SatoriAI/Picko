@@ -47,7 +47,7 @@
 </script>
 
 <svelte:head>
-	<title>{m.join_page_title()} - {m.app_name()}</title>
+	<title>{m.join_page_title()}</title>
 </svelte:head>
 
 <PageLayout isHeaderLink>
