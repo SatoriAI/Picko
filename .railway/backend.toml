@@ -6,7 +6,7 @@ dockerfilePath = "./backend/Dockerfile"
 preDeployCommand = [
     "uv run --no-sync --no-dev alembic upgrade head"
 ]
-startCommand = "uv run --no-sync --no-dev gunicorn -k uvicorn.workers.UvicornWorker source.app:app --bind 0.0.0.0:$PORT --workers 2"
+startCommand = "sh -c 'uv run --no-sync --no-dev gunicorn -k uvicorn.workers.UvicornWorker source.app:app --bind 0.0.0.0:$PORT --workers 2'"
 healthcheckPath = "/status"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5
