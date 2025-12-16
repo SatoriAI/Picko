@@ -9,7 +9,9 @@ export default defineConfig({
 		sveltekit(),
 		paraglideVitePlugin({
 			project: './project.inlang',
-			outdir: './src/lib/paraglide'
+			outdir: './src/lib/paraglide',
+			// Prefer an explicit user choice (cookie), otherwise use browser language, finally fall back to baseLocale.
+			strategy: ['cookie', 'globalVariable', 'preferredLanguage', 'baseLocale']
 		})
 	],
 	test: {
