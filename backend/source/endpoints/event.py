@@ -14,7 +14,8 @@ from source.database.operations import (
     get_event_by_registration_token,
     register_participant,
 )
-from source.settings import CurrencySelection, LanguageSelection
+from source.settings import CurrencySelection, LanguageSelection, settings
+from source.tasks.draw import draw
 
 logger = get_logger()
 
@@ -104,7 +105,6 @@ def build_event_response(event: Event) -> EventRead:
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=EventRead)
 async def create(payload: EventCreate, session: AsyncSession = Depends(get_session)) -> EventRead:
-    logger.info(f"Creating event {payload.name}")
     try:
         event = await create_event(
             session,
@@ -119,6 +119,21 @@ async def create(payload: EventCreate, session: AsyncSession = Depends(get_sessi
             status_code=status.HTTP_409_CONFLICT,
             detail="Event could not be created due to a database constraint.",
         ) from exc
+
+    # Schedule draw execution after the registration deadline; use countdown (not ETA) to avoid timezone pitfalls.
+    try:
+        deadline = event.registration_deadline
+        if deadline.tzinfo is None:
+            deadline = deadline.replace(tzinfo=datetime.UTC)
+        else:
+            deadline = deadline.astimezone(datetime.UTC)
+        draw.apply_async(
+            args=[event.id],
+            countdown=max(0, int((deadline - datetime.datetime.now(datetime.UTC)).total_seconds()))
+            + settings.schedule_buffer_seconds,
+        )
+    except Exception as exc:
+        logger.exception("Failed to schedule draw task", event_id=event.id, error=str(exc))
 
     return build_event_response(event)
 

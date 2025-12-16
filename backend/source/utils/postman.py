@@ -160,10 +160,7 @@ class PostMan:
         return SendResult(id=msg_id, raw=data)
 
     async def send_event_emails(
-        self,
-        *,
-        participants: Sequence[ParticipantProtocol],
-        event_id: int,
+        self, *, participants: Sequence[ParticipantProtocol], event_id: int
     ) -> tuple[list[str], int]:
         sent_to: list[str] = []
         skipped = 0
