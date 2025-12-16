@@ -3,6 +3,8 @@
 	import { resolve } from '$app/paths';
 	import ThemeToggle from './ThemeToggle.svelte';
 	import LanguageSwitcher from './LanguageSwitcher.svelte';
+	import { CHRISTMAS_THEME } from '$lib/stores/christmas';
+	import { ChristmasLights, SantaHat } from './christmas';
 
 	interface Props {
 		isLink?: boolean;
@@ -20,7 +22,12 @@
 			href={isLink ? resolve('/') : undefined}
 			class="flex items-center gap-2"
 		>
-			<span class="text-2xl drop-shadow-sm">🎁</span>
+			<span class="relative text-2xl drop-shadow-sm">
+				🎁
+				{#if CHRISTMAS_THEME}
+					<SantaHat />
+				{/if}
+			</span>
 			<span class="text-xl font-bold tracking-tight text-rose-500">{m.app_name()}</span>
 		</svelte:element>
 		<div class="flex items-center gap-3">
@@ -28,4 +35,7 @@
 			<LanguageSwitcher />
 		</div>
 	</div>
+	{#if CHRISTMAS_THEME}
+		<ChristmasLights />
+	{/if}
 </header>

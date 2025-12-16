@@ -114,7 +114,10 @@
 	function getCalendarUrl() {
 		if (!status.event.date) return null;
 		const date = new Date(status.event.date);
-		const dateStr = date.toISOString().replace(/-|:|\.\d+/g, '').slice(0, 8);
+		const dateStr = date
+			.toISOString()
+			.replace(/-|:|\.\d+/g, '')
+			.slice(0, 8);
 		const title = encodeURIComponent(status.event.name);
 		return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateStr}/${dateStr}`;
 	}
@@ -128,7 +131,9 @@
 	{#if isLoadingDraw}
 		<!-- Loading state when countdown reaches 0 -->
 		<div class="flex min-h-[70vh] flex-col items-center justify-center py-8">
-			<div class="mb-6 h-12 w-12 animate-spin rounded-full border-4 border-orange-200 border-t-orange-500"></div>
+			<div
+				class="mb-6 h-12 w-12 animate-spin rounded-full border-4 border-orange-200 border-t-orange-500"
+			></div>
 			<p class="text-lg font-medium text-slate-600 dark:text-slate-300">
 				{m.my_loading_draw()}
 			</p>
@@ -371,25 +376,51 @@
 
 				<!-- Countdown Timer - Standalone -->
 				<div class="mb-4 text-center">
-					<h3 class="mb-6 text-sm font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">
+					<h3
+						class="mb-6 text-sm font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500"
+					>
 						{m.countdown_title()}
 					</h3>
 					<div class="grid grid-cols-4 gap-4 text-center">
 						<div>
-							<div class="text-5xl font-bold text-slate-800 sm:text-6xl dark:text-white">{countdown.days}</div>
-							<div class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">{m.countdown_days()}</div>
+							<div class="text-5xl font-bold text-slate-800 sm:text-6xl dark:text-white">
+								{countdown.days}
+							</div>
+							<div
+								class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"
+							>
+								{m.countdown_days()}
+							</div>
 						</div>
 						<div>
-							<div class="text-5xl font-bold text-slate-800 sm:text-6xl dark:text-white">{countdown.hours}</div>
-							<div class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">{m.countdown_hours()}</div>
+							<div class="text-5xl font-bold text-slate-800 sm:text-6xl dark:text-white">
+								{countdown.hours}
+							</div>
+							<div
+								class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"
+							>
+								{m.countdown_hours()}
+							</div>
 						</div>
 						<div>
-							<div class="text-5xl font-bold text-slate-800 sm:text-6xl dark:text-white">{countdown.minutes}</div>
-							<div class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">{m.countdown_minutes()}</div>
+							<div class="text-5xl font-bold text-slate-800 sm:text-6xl dark:text-white">
+								{countdown.minutes}
+							</div>
+							<div
+								class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"
+							>
+								{m.countdown_minutes()}
+							</div>
 						</div>
 						<div>
-							<div class="text-5xl font-bold text-slate-800 sm:text-6xl dark:text-white">{countdown.seconds}</div>
-							<div class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">{m.countdown_seconds()}</div>
+							<div class="text-5xl font-bold text-slate-800 sm:text-6xl dark:text-white">
+								{countdown.seconds}
+							</div>
+							<div
+								class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"
+							>
+								{m.countdown_seconds()}
+							</div>
 						</div>
 					</div>
 				</div>

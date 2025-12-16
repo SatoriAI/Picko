@@ -39,3 +39,82 @@
 		transform: scale(1);
 	}
 }
+
+/* ==========================================
+   Christmas Theme Styles
+   ========================================== */
+
+/* Christmas theme subtle background enhancements */
+.christmas-theme {
+	background-image: linear-gradient(
+		to bottom right,
+		#fef3c7,
+		/* amber-100 */ #ecfdf5,
+		/* emerald-50 */ #fef2f2 /* rose-50 */
+	);
+}
+
+.dark .christmas-theme {
+	background-image: none;
+	background-color: #0f172a; /* slate-900 */
+}
+
+/* Festive glow on cards during Christmas */
+.christmas-theme :where(article, .card-festive) {
+	box-shadow:
+		0 4px 6px -1px rgba(0, 0, 0, 0.1),
+		0 2px 4px -2px rgba(0, 0, 0, 0.1),
+		0 0 0 1px rgba(220, 38, 38, 0.05),
+		0 0 20px -5px rgba(220, 38, 38, 0.1);
+}
+
+.dark.christmas-theme :where(article, .card-festive) {
+	box-shadow:
+		0 4px 6px -1px rgba(0, 0, 0, 0.3),
+		0 2px 4px -2px rgba(0, 0, 0, 0.2),
+		0 0 0 1px rgba(34, 197, 94, 0.1),
+		0 0 20px -5px rgba(34, 197, 94, 0.15);
+}
+
+/* Festive header border glow */
+.christmas-theme header {
+	border-bottom-color: rgba(220, 38, 38, 0.15);
+}
+
+.dark.christmas-theme header {
+	border-bottom-color: rgba(34, 197, 94, 0.2);
+}
+
+/* Festive footer with snow effect */
+.christmas-theme footer {
+	position: relative;
+	border-top-color: rgba(220, 38, 38, 0.1);
+}
+
+.dark.christmas-theme footer {
+	border-top-color: rgba(34, 197, 94, 0.15);
+}
+
+.christmas-theme footer::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 3px;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		#dc2626 15%,
+		#22c55e 35%,
+		#dc2626 50%,
+		#22c55e 65%,
+		#dc2626 85%,
+		transparent 100%
+	);
+	opacity: 0.4;
+}
+
+.dark.christmas-theme footer::before {
+	opacity: 0.3;
+}
