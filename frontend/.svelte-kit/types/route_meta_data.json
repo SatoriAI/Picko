@@ -12,14 +12,8 @@
 	"/api/event/[id]": [
 		"src/routes/api/event/[id]/+server.ts"
 	],
-	"/api/event/[id]/send-emails": [
-		"src/routes/api/event/[id]/send-emails/+server.ts"
-	],
 	"/api/participant/me/[token]": [
 		"src/routes/api/participant/me/[token]/+server.ts"
-	],
-	"/api/participant/[id]": [
-		"src/routes/api/participant/[id]/+server.ts"
 	],
 	"/event/[id]": [
 		"src/routes/event/[id]/+page.ts"

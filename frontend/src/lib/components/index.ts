@@ -18,7 +18,6 @@ export { default as StepCard } from './StepCard.svelte';
 export { default as Chip } from './Chip.svelte';
 export { default as ThemeToggle } from './ThemeToggle.svelte';
 export { default as LanguageSwitcher } from './LanguageSwitcher.svelte';
-export { default as ParticipantRow } from './ParticipantRow.svelte';
 
 // Icons
 export * from './icons';

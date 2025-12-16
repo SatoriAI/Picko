@@ -172,11 +172,7 @@ async def get_assignment_by_token(session: AsyncSession, *, reveal_token: str) -
     return result.scalar_one_or_none()
 
 
-async def get_participant_by_access_token(
-    session: AsyncSession,
-    *,
-    access_token: str,
-) -> Participant | None:
+async def get_participant_by_access_token(session: AsyncSession, *, access_token: str) -> Participant | None:
     result = await session.execute(
         select(Participant)
         .options(

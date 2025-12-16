@@ -115,11 +115,5 @@ class Assignment(Base):
 
     # SQL Alchemy Relations
     draw: Mapped["Draw"] = relationship(back_populates="assignments")
-    giver: Mapped["Participant"] = relationship(
-        back_populates="given_assignments",
-        foreign_keys=[giver_id],
-    )
-    receiver: Mapped["Participant"] = relationship(
-        back_populates="received_assignments",
-        foreign_keys=[receiver_id],
-    )
+    giver: Mapped["Participant"] = relationship(back_populates="given_assignments", foreign_keys=[giver_id])
+    receiver: Mapped["Participant"] = relationship(back_populates="received_assignments", foreign_keys=[receiver_id])

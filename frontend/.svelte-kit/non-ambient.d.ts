@@ -27,14 +27,12 @@ export {};
 
 declare module "$app/types" {
 	export interface AppTypes {
-		RouteId(): "/" | "/api" | "/api/draw" | "/api/draw/reveal" | "/api/draw/reveal/[token]" | "/api/event" | "/api/event/register" | "/api/event/register/[token]" | "/api/event/[id]" | "/api/event/[id]/send-emails" | "/api/participant" | "/api/participant/me" | "/api/participant/me/[token]" | "/api/participant/[id]" | "/event" | "/event/[id]" | "/join" | "/join/[token]" | "/my" | "/my/[token]" | "/register" | "/register/[token]";
+		RouteId(): "/" | "/api" | "/api/draw" | "/api/draw/reveal" | "/api/draw/reveal/[token]" | "/api/event" | "/api/event/register" | "/api/event/register/[token]" | "/api/event/[id]" | "/api/participant" | "/api/participant/me" | "/api/participant/me/[token]" | "/event" | "/event/[id]" | "/join" | "/join/[token]" | "/my" | "/my/[token]" | "/register" | "/register/[token]";
 		RouteParams(): {
 			"/api/draw/reveal/[token]": { token: string };
 			"/api/event/register/[token]": { token: string };
 			"/api/event/[id]": { id: string };
-			"/api/event/[id]/send-emails": { id: string };
 			"/api/participant/me/[token]": { token: string };
-			"/api/participant/[id]": { id: string };
 			"/event/[id]": { id: string };
 			"/join/[token]": { token: string };
 			"/my/[token]": { token: string };
@@ -50,11 +48,9 @@ declare module "$app/types" {
 			"/api/event/register": { token?: string };
 			"/api/event/register/[token]": { token: string };
 			"/api/event/[id]": { id: string };
-			"/api/event/[id]/send-emails": { id: string };
-			"/api/participant": { token?: string; id?: string };
+			"/api/participant": { token?: string };
 			"/api/participant/me": { token?: string };
 			"/api/participant/me/[token]": { token: string };
-			"/api/participant/[id]": { id: string };
 			"/event": { id?: string };
 			"/event/[id]": { id: string };
 			"/join": { token?: string };
@@ -64,7 +60,7 @@ declare module "$app/types" {
 			"/register": { token?: string };
 			"/register/[token]": { token: string }
 		};
-		Pathname(): "/" | "/api" | "/api/" | "/api/draw" | "/api/draw/" | "/api/draw/reveal" | "/api/draw/reveal/" | `/api/draw/reveal/${string}` & {} | `/api/draw/reveal/${string}/` & {} | "/api/event" | "/api/event/" | "/api/event/register" | "/api/event/register/" | `/api/event/register/${string}` & {} | `/api/event/register/${string}/` & {} | `/api/event/${string}` & {} | `/api/event/${string}/` & {} | `/api/event/${string}/send-emails` & {} | `/api/event/${string}/send-emails/` & {} | "/api/participant" | "/api/participant/" | "/api/participant/me" | "/api/participant/me/" | `/api/participant/me/${string}` & {} | `/api/participant/me/${string}/` & {} | `/api/participant/${string}` & {} | `/api/participant/${string}/` & {} | "/event" | "/event/" | `/event/${string}` & {} | `/event/${string}/` & {} | "/join" | "/join/" | `/join/${string}` & {} | `/join/${string}/` & {} | "/my" | "/my/" | `/my/${string}` & {} | `/my/${string}/` & {} | "/register" | "/register/" | `/register/${string}` & {} | `/register/${string}/` & {};
+		Pathname(): "/" | "/api" | "/api/" | "/api/draw" | "/api/draw/" | "/api/draw/reveal" | "/api/draw/reveal/" | `/api/draw/reveal/${string}` & {} | `/api/draw/reveal/${string}/` & {} | "/api/event" | "/api/event/" | "/api/event/register" | "/api/event/register/" | `/api/event/register/${string}` & {} | `/api/event/register/${string}/` & {} | `/api/event/${string}` & {} | `/api/event/${string}/` & {} | "/api/participant" | "/api/participant/" | "/api/participant/me" | "/api/participant/me/" | `/api/participant/me/${string}` & {} | `/api/participant/me/${string}/` & {} | "/event" | "/event/" | `/event/${string}` & {} | `/event/${string}/` & {} | "/join" | "/join/" | `/join/${string}` & {} | `/join/${string}/` & {} | "/my" | "/my/" | `/my/${string}` & {} | `/my/${string}/` & {} | "/register" | "/register/" | `/register/${string}` & {} | `/register/${string}/` & {};
 		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
 		Asset(): "/robots.txt" | string & {};
 	}

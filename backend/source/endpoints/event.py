@@ -1,6 +1,6 @@
 import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,11 +12,9 @@ from source.database.operations import (
     create_event,
     get_event_and_maybe_draw,
     get_event_by_registration_token,
-    get_event_participants_with_assignments,
     register_participant,
 )
-from source.settings import CurrencySelection, LanguageSelection, settings
-from source.utils.postman import PostMan, PostManConfigError
+from source.settings import CurrencySelection, LanguageSelection
 
 logger = get_logger()
 
@@ -73,12 +71,6 @@ class ParticipantRegistered(BaseModel):
     wishlist: str | None
     event_id: int
     access_token: str
-
-
-class SendEmailsResponse(BaseModel):
-    sent_count: int
-    skipped_count: int
-    sent_to: list[str]
 
 
 def build_event_response(event: Event) -> EventRead:
@@ -181,26 +173,3 @@ async def get_event_for_registration(token: str, session: AsyncSession = Depends
     if (event := await get_event_by_registration_token(session, registration_token=token)) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
     return build_event_response(event)
-
-
-@router.post("/{event_id}/send-emails", status_code=status.HTTP_200_OK, response_model=SendEmailsResponse)
-async def send_emails(
-    event_id: int, request: Request, session: AsyncSession = Depends(get_session)
-) -> SendEmailsResponse:
-    if not (participants := await get_event_participants_with_assignments(session, event_id=event_id)):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found or has no participants")
-
-    try:
-        postman = PostMan(settings)
-    except PostManConfigError as exc:
-        logger.exception("Email sending is not configured", error=str(exc))
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Email sending is not configured on the server.",
-        ) from exc
-
-    sent_to, skipped_count = await postman.send_event_emails(
-        participants=participants, event_id=event_id, request=request
-    )
-
-    return SendEmailsResponse(sent_count=len(sent_to), skipped_count=skipped_count, sent_to=sent_to)
