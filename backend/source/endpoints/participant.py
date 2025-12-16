@@ -47,6 +47,9 @@ async def get(access_token: str, session: AsyncSession = Depends(get_session)) -
     if not event.is_draw_complete and now > event.registration_deadline and len(event.participants) >= 2:
         await execute_draw(session, event)
 
+        # Expire all cached objects to force fresh load from database
+        session.expire_all()
+
         # Reload participant to get the new assignment
         if (participant := await get_participant_by_access_token(session, access_token=access_token)) is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Participant not found after draw.")

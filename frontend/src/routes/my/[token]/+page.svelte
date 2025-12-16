@@ -11,12 +11,11 @@
 	// Props from loader
 	let { data } = $props();
 	const status: MyStatusData = data;
-	const token: string = data.token;
-	void token; // prevent unused variable error
 
 	// Countdown state
 	let countdown = $state({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 	let countdownInterval: ReturnType<typeof setInterval> | null = null;
+	let isLoadingDraw = $state(false);
 
 	// Reveal animation state
 	let isRevealed = $state(false);
@@ -29,6 +28,7 @@
 
 	// Derived states
 	let deadlinePassed = $derived(new Date(status.event.registration_deadline) <= new Date());
+	let drawFailed = $derived(deadlinePassed && !status.event.is_draw_complete && !status.assignment);
 	let myLink = $derived(typeof window !== 'undefined' ? window.location.href : '');
 
 	// Generate confetti pieces
@@ -72,8 +72,11 @@
 			if (countdownInterval) {
 				clearInterval(countdownInterval);
 				countdownInterval = null;
-				// Reload to get assignment
-				window.location.reload();
+				// Show loading state and reload to get assignment
+				isLoadingDraw = true;
+				setTimeout(() => {
+					window.location.reload();
+				}, 1500);
 			}
 			return;
 		}
@@ -107,6 +110,14 @@
 			console.error('Failed to copy:', err);
 		}
 	}
+
+	function getCalendarUrl() {
+		if (!status.event.date) return null;
+		const date = new Date(status.event.date);
+		const dateStr = date.toISOString().replace(/-|:|\.\d+/g, '').slice(0, 8);
+		const title = encodeURIComponent(status.event.name);
+		return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateStr}/${dateStr}`;
+	}
 </script>
 
 <svelte:head>
@@ -114,7 +125,40 @@
 </svelte:head>
 
 <PageLayout isHeaderLink>
-	{#if status.assignment}
+	{#if isLoadingDraw}
+		<!-- Loading state when countdown reaches 0 -->
+		<div class="flex min-h-[70vh] flex-col items-center justify-center py-8">
+			<div class="mb-6 h-12 w-12 animate-spin rounded-full border-4 border-orange-200 border-t-orange-500"></div>
+			<p class="text-lg font-medium text-slate-600 dark:text-slate-300">
+				{m.my_loading_draw()}
+			</p>
+		</div>
+	{:else if drawFailed}
+		<!-- Draw failed - not enough participants -->
+		<div class="flex min-h-[70vh] flex-col items-center justify-center py-8">
+			<div class="mx-auto max-w-md text-center">
+				<div class="mb-6 text-6xl">😔</div>
+				<h1 class="mb-3 text-2xl font-bold text-slate-800 dark:text-white">
+					{m.my_draw_failed_title()}
+				</h1>
+				<p class="mb-2 text-slate-500 dark:text-slate-400">
+					{m.my_draw_failed_desc()}
+				</p>
+				<p class="mb-8 text-sm text-slate-400 dark:text-slate-500">
+					{m.my_draw_failed_contact()}
+				</p>
+				<a
+					href={resolve(`/event/${status.event.id}`)}
+					target="_blank"
+					rel="noopener noreferrer"
+					class="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-5 py-3 font-medium text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+				>
+					<span>👥</span>
+					{m.my_view_event_button()}
+				</a>
+			</div>
+		</div>
+	{:else if status.assignment}
 		<!-- Assignment Ready - Show Gift Box Reveal -->
 		<div class="flex min-h-[70vh] flex-col items-center justify-center py-8">
 			<!-- Event name badge -->
@@ -273,128 +317,136 @@
 							{/if}
 						</Card>
 
+						<!-- Next step CTA -->
+						<div class="mt-6 rounded-xl bg-gradient-to-r from-orange-500/10 to-pink-500/10 px-6 py-4 text-center dark:from-orange-500/20 dark:to-pink-500/20">
+							<p class="font-medium text-slate-700 dark:text-slate-200">
+								🛍️ {m.my_next_step()}
+							</p>
+						</div>
+
 						<!-- Secret reminder -->
 						<p
-							class="mt-6 mb-4 flex items-center gap-2 text-center text-sm text-slate-500 dark:text-slate-400"
+							class="mt-4 mb-6 flex items-center gap-2 text-center text-sm text-slate-500 dark:text-slate-400"
 						>
 							<span>🤫</span>
 							{m.join_keep_secret()}
 						</p>
 
-						<!-- Link to event page -->
-						<a
-							href={resolve(`/event/${status.event.id}`)}
-							data-sveltekit-preload-data="hover"
-							class="inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-						>
-							<span>👥</span>
-							{m.my_view_event_button()}
-						</a>
+						<!-- Action links -->
+						<div class="flex flex-wrap items-center justify-center gap-3">
+							{#if status.event.date}
+								{@const calendarUrl = getCalendarUrl()}
+								{#if calendarUrl}
+									<a
+										href={calendarUrl}
+										target="_blank"
+										rel="noopener noreferrer"
+										class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+									>
+										<span>📅</span>
+										{m.my_add_to_calendar()}
+									</a>
+								{/if}
+							{/if}
+							<a
+								href={resolve(`/event/${status.event.id}`)}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+							>
+								<span>👥</span>
+								{m.my_view_event_button()}
+							</a>
+						</div>
 					</div>
 				{/if}
 			</div>
 		</div>
 	{:else}
 		<!-- Waiting for Draw -->
-		<section class="py-6 sm:py-8">
-			<div class="mx-auto max-w-3xl">
+		<div class="flex min-h-[70vh] flex-col items-center justify-center py-8">
+			<div class="mx-auto w-full max-w-lg px-4">
 				<!-- Header -->
-				<div class="mb-6 text-center">
-					<div
-						class="mb-3 inline-block rounded-full bg-gradient-to-r from-orange-500 to-pink-500 px-4 py-1.5 text-sm font-medium text-white"
-					>
-						🎄 {status.event.name}
-					</div>
+				<div class="mb-10 text-center">
 					<h1 class="mb-2 text-2xl font-bold text-slate-800 sm:text-3xl dark:text-white">
 						{m.my_greeting({ name: status.participant_name })}
 					</h1>
-				</div>
-
-				<!-- Countdown Timer -->
-				<div class="mb-6 rounded-xl bg-gradient-to-br from-orange-500 to-pink-500 p-6 text-white">
-					<h3 class="mb-4 text-center text-sm font-medium uppercase tracking-wide opacity-90">
-						{m.countdown_title()}
-					</h3>
-					<div class="grid grid-cols-4 gap-2 text-center">
-						<div>
-							<div class="text-3xl font-bold sm:text-4xl">{countdown.days}</div>
-							<div class="text-xs uppercase opacity-75">{m.countdown_days()}</div>
-						</div>
-						<div>
-							<div class="text-3xl font-bold sm:text-4xl">{countdown.hours}</div>
-							<div class="text-xs uppercase opacity-75">{m.countdown_hours()}</div>
-						</div>
-						<div>
-							<div class="text-3xl font-bold sm:text-4xl">{countdown.minutes}</div>
-							<div class="text-xs uppercase opacity-75">{m.countdown_minutes()}</div>
-						</div>
-						<div>
-							<div class="text-3xl font-bold sm:text-4xl">{countdown.seconds}</div>
-							<div class="text-xs uppercase opacity-75">{m.countdown_seconds()}</div>
-						</div>
-					</div>
-					<p class="mt-4 text-center text-sm opacity-90">
-						{m.my_draw_will_happen()}
+					<p class="text-slate-500 dark:text-slate-400">
+						{m.my_waiting_subtitle({ event: status.event.name })}
 					</p>
 				</div>
 
-				<!-- Action Cards -->
-				<div class="space-y-4">
-					<!-- Save this link notice -->
-					<Card class="p-5">
-						<div class="flex items-start gap-4">
-							<span class="text-2xl">🔗</span>
-							<div class="flex-1">
-								<p class="mb-1.5 font-semibold text-slate-800 dark:text-white">
-									{m.my_save_link_title()}
-								</p>
-								<p class="mb-3 text-sm text-slate-500 dark:text-slate-400">
-									{m.my_save_link_desc()}
-								</p>
-								<Button
-									variant="outline"
-									size="sm"
-									onclick={copyMyLink}
-									class={linkCopied.active
-										? 'border-emerald-500 bg-emerald-500/10 text-emerald-600'
-										: ''}
-								>
-									{#if linkCopied.active}
-										<CheckIcon class="h-4 w-4" />
-										<span>{m.admin_copied()}</span>
-									{:else}
-										<CopyIcon class="h-4 w-4" />
-										<span>{m.my_copy_link()}</span>
-									{/if}
-								</Button>
-							</div>
+				<!-- Countdown Timer - Standalone -->
+				<div class="mb-4 text-center">
+					<h3 class="mb-6 text-sm font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500">
+						{m.countdown_title()}
+					</h3>
+					<div class="grid grid-cols-4 gap-4 text-center">
+						<div>
+							<div class="text-5xl font-bold text-slate-800 sm:text-6xl dark:text-white">{countdown.days}</div>
+							<div class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">{m.countdown_days()}</div>
 						</div>
-					</Card>
+						<div>
+							<div class="text-5xl font-bold text-slate-800 sm:text-6xl dark:text-white">{countdown.hours}</div>
+							<div class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">{m.countdown_hours()}</div>
+						</div>
+						<div>
+							<div class="text-5xl font-bold text-slate-800 sm:text-6xl dark:text-white">{countdown.minutes}</div>
+							<div class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">{m.countdown_minutes()}</div>
+						</div>
+						<div>
+							<div class="text-5xl font-bold text-slate-800 sm:text-6xl dark:text-white">{countdown.seconds}</div>
+							<div class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">{m.countdown_seconds()}</div>
+						</div>
+					</div>
+				</div>
 
-					<!-- Link to event page -->
-					<Card class="p-5">
-						<div class="flex items-start gap-4">
-							<span class="text-2xl">👥</span>
-							<div class="flex-1">
-								<p class="mb-1.5 font-semibold text-slate-800 dark:text-white">
-									{m.my_view_event_title()}
-								</p>
-								<p class="mb-3 text-sm text-slate-500 dark:text-slate-400">
-									{m.my_view_event_desc()}
-								</p>
-								<a
-									href={resolve(`/event/${status.event.id}`)}
-									data-sveltekit-preload-data="hover"
-									class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
-								>
-									{m.my_view_event_button()}
-								</a>
-							</div>
-						</div>
-					</Card>
+				<!-- Assignment message -->
+				<p class="mb-10 text-center text-sm text-slate-500 dark:text-slate-400">
+					✨ {m.my_draw_will_happen()}
+				</p>
+
+				<!-- Primary action -->
+				<div class="mb-8 flex justify-center">
+					<a
+						href={resolve(`/event/${status.event.id}`)}
+						target="_blank"
+						rel="noopener noreferrer"
+						class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 px-6 py-3 font-medium text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl"
+					>
+						<span>👥</span>
+						{m.my_view_event_button()}
+					</a>
+				</div>
+
+				<!-- Smart hint with copy option -->
+				<div class="px-5 py-4">
+					<p class="text-center text-sm text-slate-500 dark:text-slate-400">
+						<span class="mr-1">📧</span>{m.my_email_hint()}
+						<br />
+						<span class="text-slate-400 dark:text-slate-500">{m.my_no_email_hint()}</span>
+					</p>
+					<div class="mt-3 flex justify-center">
+						<Button
+							variant="outline"
+							size="sm"
+							onclick={copyMyLink}
+							class={linkCopied.active
+								? 'border-emerald-500 bg-emerald-500/10 text-emerald-600'
+								: ''}
+						>
+							{#if linkCopied.active}
+								<CheckIcon class="h-4 w-4" />
+								<span>{m.admin_copied()}</span>
+							{:else}
+								<CopyIcon class="h-4 w-4" />
+								<span>{m.my_copy_link()}</span>
+							{/if}
+						</Button>
+					</div>
 				</div>
 			</div>
-		</section>
+		</div>
 	{/if}
 </PageLayout>
 
