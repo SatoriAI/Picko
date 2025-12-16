@@ -1,24 +1,22 @@
 import html as html_lib
+import json
 from collections.abc import Sequence
 from dataclasses import dataclass
-from functools import lru_cache, partial
+from functools import lru_cache
 from pathlib import Path
 from string import Template
-from typing import Any
+from typing import Any, Protocol
 
-import requests
-from anyio import to_thread
-from fastapi import Request, status
+import httpx
+from fastapi import status
 from structlog import get_logger
+
+from source.settings import LanguageSelection, Settings, settings
 
 logger = get_logger()
 
 
 class PostManError(RuntimeError):
-    pass
-
-
-class PostManConfigError(PostManError):
     pass
 
 
@@ -32,41 +30,61 @@ class SendResult:
     raw: dict[str, Any]
 
 
+class AssignmentProtocol(Protocol):
+    reveal_token: str
+
+
+class ParticipantProtocol(Protocol):
+    email: str | None
+    name: str | None
+    language: LanguageSelection
+    event: Any
+    given_assignments: Sequence[AssignmentProtocol]
+
+
 class PostMan:
     BASE_URL = "https://api.resend.com/emails"
 
-    def __init__(self, settings: Any, *, timeout: float = 20.0, session: requests.Session | None = None) -> None:
-        self._sender = getattr(settings, "email_from", None)
-        self._api_key = getattr(settings, "resend_api_key", None)
-        self._frontend_origin = getattr(settings, "cors_origins", None)
-        self._app_name = getattr(settings, "app_name", None)
-
-        if not self._sender:
-            raise PostManConfigError("Missing settings.email_from!")
-        if not self._api_key:
-            raise PostManConfigError("Missing settings.resend_api_key!")
-        if not self._frontend_origin:
-            raise PostManConfigError("Missing settings.cors_origins!")
-        if not self._app_name:
-            raise PostManConfigError("Missing settings.app_name!")
+    def __init__(
+        self, settings: Settings = settings, *, timeout: float = 20.0, client: httpx.AsyncClient | None = None
+    ) -> None:
+        self._sender = settings.email_from
+        self._api_key = settings.resend_api_key
+        self._frontend_origin = settings.cors_origins
+        self._app_name = settings.app_name
 
         self._timeout = timeout
-        self._session = session or requests.Session()
+        self._client = client
+        self._owns_client = client is None
 
-    @staticmethod
-    def _normalize_language(language: str | None) -> str:
-        return "pl" if (language or "en").strip().lower().startswith("pl") else "en"
+    async def __aenter__(self) -> "PostMan":
+        if self._client is None:
+            self._client = httpx.AsyncClient(timeout=self._timeout)
+        return self
+
+    async def __aexit__(self, *args: Any) -> None:
+        await self.close()
 
     @staticmethod
     @lru_cache(maxsize=8)
-    def _load_christmas_template(language: str) -> str:
-        lang = PostMan._normalize_language(language)
-        path = Path(__file__).resolve().parent / "templates" / "christmas" / f"{lang}.html"
+    def _load_christmas_template(language: LanguageSelection) -> str:
+        path = Path(__file__).resolve().parent / "templates" / "christmas" / f"{language}.html"
         return path.read_text(encoding="utf-8")
 
     @staticmethod
-    def _render_christmas_email_html(*, language: str | None, join_url: str, app_name: str = "Picko") -> str:
-        return Template(PostMan._load_christmas_template(language or "en")).safe_substitute(
+    @lru_cache(maxsize=1)
+    def _load_christmas_subjects() -> dict[str, str]:
+        path = Path(__file__).resolve().parent / "templates" / "christmas" / "subject.json"
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    @staticmethod
+    def _get_christmas_subject(language: LanguageSelection) -> str:
+        subjects = PostMan._load_christmas_subjects()
+        return subjects[language.value]
+
+    @staticmethod
+    def _render_christmas_email_html(*, language: LanguageSelection, join_url: str, app_name: str = "Picko") -> str:
+        return Template(PostMan._load_christmas_template(language)).safe_substitute(
             join_url=html_lib.escape(join_url),
             app_name=html_lib.escape(app_name),
         )
@@ -83,24 +101,22 @@ class PostMan:
             raise ValueError("Recipient list is empty.")
         return recipients
 
-    def send(
+    async def send(
         self,
         *,
         to: str | Sequence[str],
         subject: str,
         text: str | None = None,
         html: str | None = None,
-        cc: str | Sequence[str] | None = None,
-        bcc: str | Sequence[str] | None = None,
-        reply_to: str | None = None,
         tags: dict[str, str] | None = None,
-        headers: dict[str, str] | None = None,
     ) -> SendResult:
-        if not (subject := (subject or "").strip()):
+        subject = (subject or "").strip()
+        if not subject:
             raise ValueError("subject is required")
 
-        text_s, html_s = (text or "").strip(), (html or "").strip()
-        if not (text_s or html_s):
+        text_body = (text or "").strip()
+        html_body = (html or "").strip()
+        if not (text_body or html_body):
             raise ValueError("Provide at least one of: text or html")
 
         payload: dict[str, Any] = {
@@ -108,32 +124,23 @@ class PostMan:
             "to": self._normalize_recipients(to),
             "subject": subject,
         }
-        if text_s:
-            payload["text"] = text_s
-        if html_s:
-            payload["html"] = html_s
-        if cc is not None:
-            payload["cc"] = self._normalize_recipients(cc)
-        if bcc is not None:
-            payload["bcc"] = self._normalize_recipients(bcc)
-        if reply_to and (reply_to := reply_to.strip()):
-            payload["reply_to"] = reply_to
+        if text_body:
+            payload["text"] = text_body
+        if html_body:
+            payload["html"] = html_body
         if tags:
             payload["tags"] = [{"name": k, "value": v} for k, v in tags.items()]
-        if headers:
-            payload["headers"] = headers
+
+        if self._client is None:
+            raise PostManSendError("PostMan client not initialized. Use 'async with PostMan() as postman:'")
 
         try:
-            resp = self._session.post(
+            resp = await self._client.post(
                 self.BASE_URL,
-                headers={
-                    "Authorization": f"Bearer {self._api_key}",
-                    "Content-Type": "application/json",
-                },
+                headers={"Authorization": f"Bearer {self._api_key}"},
                 json=payload,
-                timeout=self._timeout,
             )
-        except requests.RequestException as e:
+        except httpx.RequestError as e:
             raise PostManSendError(f"Network error sending email: {e}") from e
 
         try:
@@ -142,78 +149,75 @@ class PostMan:
             data = {"raw_text": resp.text}
 
         if resp.status_code >= status.HTTP_400_BAD_REQUEST:
-            raise PostManSendError(f"Resend error {resp.status_code}: {data}")
+            # Sanitize response to avoid leaking sensitive info
+            safe_data = {k: v for k, v in data.items() if k not in ("request", "headers")}
+            raise PostManSendError(f"Resend error {resp.status_code}: {safe_data}")
 
-        if not (msg_id := data.get("id")):
+        msg_id = data.get("id")
+        if not msg_id:
             raise PostManSendError(f"Resend returned success but no id: {data}")
 
         return SendResult(id=msg_id, raw=data)
 
     async def send_event_emails(
-        self, *, participants: Sequence[Any], event_id: int, request: Request
+        self,
+        *,
+        participants: Sequence[ParticipantProtocol],
+        event_id: int,
     ) -> tuple[list[str], int]:
-        _ = request  # keep signature; not used in current behavior
-
         sent_to: list[str] = []
         skipped = 0
 
-        try:
-            for p in participants:
-                if not getattr(p, "email", None):
-                    skipped += 1
-                    continue
+        for participant in participants:
+            if not participant.email:
+                skipped += 1
+                continue
 
-                assignments = getattr(p, "given_assignments", None) or []
-                if not assignments or not getattr(p, "event", None):
-                    skipped += 1
-                    continue
+            assignments = participant.given_assignments
+            if not assignments or not participant.event:
+                skipped += 1
+                continue
 
-                token = assignments[0].reveal_token
-                join_url = f"{self._frontend_origin}/join/{token}"
+            token = assignments[0].reveal_token
+            join_url = f"{self._frontend_origin}/join/{token}"
 
-                lang = self._normalize_language(getattr(p, "language", "en"))
-                subject = (
-                    "Secret Santa: your reveal link 🎄" if lang == "en" else "Secret Santa: Twój link do odkrycia 🎄"
+            lang = participant.language
+            subject = self._get_christmas_subject(lang)
+
+            html_body = self._render_christmas_email_html(language=lang, join_url=join_url, app_name=self._app_name)
+            text_body = self._render_christmas_email_text(language=lang, join_url=join_url, app_name=self._app_name)
+
+            try:
+                result = await self.send(
+                    to=participant.email,
+                    subject=subject,
+                    html=html_body,
+                    text=text_body,
+                    tags={"event_id": str(event_id)},
                 )
-
-                html_body = self._render_christmas_email_html(language=lang, join_url=join_url, app_name=self._app_name)
-                text_body = self._render_christmas_email_text(language=lang, join_url=join_url, app_name=self._app_name)
-
-                try:
-                    result = await to_thread.run_sync(
-                        partial(
-                            self.send,
-                            to=p.email,
-                            subject=subject,
-                            html=html_body,
-                            text=text_body,
-                            tags={"event_id": str(event_id)},
-                        )
-                    )
-                except PostManSendError as exc:
-                    logger.exception(
-                        "Failed to send email",
-                        to=p.email,
-                        participant_name=getattr(p, "name", None),
-                        event_id=event_id,
-                        error=str(exc),
-                    )
-                    skipped += 1
-                    continue
-
-                logger.info(
-                    "Email sent",
-                    to=p.email,
-                    participant_name=getattr(p, "name", None),
+            except PostManSendError as exc:
+                logger.exception(
+                    "Failed to send email",
+                    to=participant.email,
+                    participant_name=participant.name,
                     event_id=event_id,
-                    resend_id=result.id,
+                    error=str(exc),
                 )
-                sent_to.append(getattr(p, "name", ""))
+                skipped += 1
+                continue
 
-        finally:
-            self.close()
+            logger.info(
+                "Email sent",
+                to=participant.email,
+                participant_name=participant.name,
+                event_id=event_id,
+                resend_id=result.id,
+            )
+            sent_to.append(participant.name or "")
 
         return sent_to, skipped
 
-    def close(self) -> None:
-        self._session.close()
+    async def close(self) -> None:
+        if self._client and self._owns_client:
+            await self._client.aclose()
+            self._client = None
