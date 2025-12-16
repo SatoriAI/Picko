@@ -3,6 +3,6 @@ builder = "DOCKERFILE"
 dockerfilePath = "./backend/Dockerfile"
 
 [deploy]
-startCommand = "celery -A source.celery_app:celery_app worker -l info"
+startCommand = "uv run --no-sync --no-dev celery -A source.celery_app:celery_app worker -l info"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5
