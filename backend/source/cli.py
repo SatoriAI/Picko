@@ -45,7 +45,7 @@ def cli() -> None:
 
 @cli.command("set-deadline")
 @click.argument("event_id", type=int)
-@click.argument("deadline", help="The new registration deadline in ISO-8601 format, e.g. 2025-12-24T19:30:00+00:00")
+@click.argument("deadline", type=str)
 @click.option("--revoke-task-id", default=None, help="If provided, revoke this Celery task ID before scheduling.")
 @click.option(
     "--terminate", is_flag=True, default=False, help="If revoking, also request termination if the task is running."
