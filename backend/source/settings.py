@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     # Email service
     email_from: str
     resend_api_key: str
+    resend_max_retries: int = 6
+    resend_backoff_base_seconds: float = 0.5
+    resend_max_retry_sleep_seconds: float = 20.0
+    resend_min_interval_seconds: float = 0.0
 
     # Manually set variables
     app_name: str = "Picko"

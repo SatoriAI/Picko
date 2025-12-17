@@ -1,7 +1,11 @@
+import asyncio
+import datetime
 import html as html_lib
 import json
+import random
 from collections.abc import Sequence
 from dataclasses import dataclass
+from email.utils import parsedate_to_datetime
 from functools import lru_cache
 from pathlib import Path
 from string import Template
@@ -52,6 +56,10 @@ class PostMan:
         self._api_key = settings.resend_api_key
         self._frontend_origin = settings.cors_origins
         self._app_name = settings.app_name
+        self._max_retries = int(getattr(settings, "resend_max_retries", 6))
+        self._backoff_base_seconds = float(getattr(settings, "resend_backoff_base_seconds", 0.5))
+        self._max_retry_sleep_seconds = float(getattr(settings, "resend_max_retry_sleep_seconds", 20.0))
+        self._min_interval_seconds = float(getattr(settings, "resend_min_interval_seconds", 0.0))
 
         self._timeout = timeout
         self._client = client
@@ -101,6 +109,47 @@ class PostMan:
             raise ValueError("Recipient list is empty.")
         return recipients
 
+    @staticmethod
+    def _parse_retry_after_seconds(value: str | None) -> float | None:
+        if not value:
+            return None
+        v = value.strip()
+        if not v:
+            return None
+        # RFC 9110: Retry-After can be delta-seconds or an HTTP-date
+        try:
+            return max(0.0, float(int(v)))
+        except ValueError:
+            pass
+        try:
+            dt = parsedate_to_datetime(v)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=datetime.UTC)
+            now = datetime.datetime.now(datetime.UTC)
+            return max(0.0, (dt - now).total_seconds())
+        except Exception:
+            return None
+
+    def _compute_backoff_seconds(self, *, attempt: int, retry_after_seconds: float | None) -> float:
+        if retry_after_seconds is not None:
+            return min(retry_after_seconds, self._max_retry_sleep_seconds)
+        # Exponential backoff with jitter.
+        base = max(0.0, self._backoff_base_seconds)
+        exp = base * (2**attempt)
+        jitter = random.uniform(0.0, max(0.0, base))
+        return min(exp + jitter, self._max_retry_sleep_seconds)
+
+    @staticmethod
+    def _is_retryable_status(code: int) -> bool:
+        return code == status.HTTP_429_TOO_MANY_REQUESTS or code in (
+            status.HTTP_408_REQUEST_TIMEOUT,
+            status.HTTP_425_TOO_EARLY,
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status.HTTP_502_BAD_GATEWAY,
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            status.HTTP_504_GATEWAY_TIMEOUT,
+        )
+
     async def send(
         self,
         *,
@@ -134,30 +183,61 @@ class PostMan:
         if self._client is None:
             raise PostManSendError("PostMan client not initialized. Use 'async with PostMan() as postman:'")
 
-        try:
-            resp = await self._client.post(
-                self.BASE_URL,
-                headers={"Authorization": f"Bearer {self._api_key}"},
-                json=payload,
-            )
-        except httpx.RequestError as e:
-            raise PostManSendError(f"Network error sending email: {e}") from e
+        last_exc: Exception | None = None
+        for attempt in range(max(0, self._max_retries) + 1):
+            try:
+                resp = await self._client.post(
+                    self.BASE_URL,
+                    headers={"Authorization": f"Bearer {self._api_key}"},
+                    json=payload,
+                )
+            except httpx.RequestError as e:
+                last_exc = e
+                if attempt >= self._max_retries:
+                    raise PostManSendError(f"Network error sending email after retries: {e}") from e
+                sleep_s = self._compute_backoff_seconds(attempt=attempt, retry_after_seconds=None)
+                logger.warning(
+                    "Email send network error; retrying",
+                    attempt=attempt + 1,
+                    max_retries=self._max_retries,
+                    sleep_seconds=sleep_s,
+                    error=str(e),
+                )
+                await asyncio.sleep(sleep_s)
+                continue
 
-        try:
-            data = resp.json()
-        except ValueError:
-            data = {"raw_text": resp.text}
+            try:
+                data = resp.json()
+            except ValueError:
+                data = {"raw_text": resp.text}
 
-        if resp.status_code >= status.HTTP_400_BAD_REQUEST:
-            # Sanitize response to avoid leaking sensitive info
-            safe_data = {k: v for k, v in data.items() if k not in ("request", "headers")}
-            raise PostManSendError(f"Resend error {resp.status_code}: {safe_data}")
+            if resp.status_code >= status.HTTP_400_BAD_REQUEST:
+                # Sanitize response to avoid leaking sensitive info
+                safe_data = {k: v for k, v in data.items() if k not in ("request", "headers")}
+                if self._is_retryable_status(resp.status_code) and attempt < self._max_retries:
+                    retry_after = self._parse_retry_after_seconds(resp.headers.get("Retry-After"))
+                    sleep_s = self._compute_backoff_seconds(attempt=attempt, retry_after_seconds=retry_after)
+                    logger.warning(
+                        "Email send got retryable response; retrying",
+                        status_code=resp.status_code,
+                        attempt=attempt + 1,
+                        max_retries=self._max_retries,
+                        retry_after_seconds=retry_after,
+                        sleep_seconds=sleep_s,
+                        response=safe_data,
+                    )
+                    await asyncio.sleep(sleep_s)
+                    continue
+                raise PostManSendError(f"Resend error {resp.status_code}: {safe_data}")
 
-        msg_id = data.get("id")
-        if not msg_id:
-            raise PostManSendError(f"Resend returned success but no id: {data}")
+            msg_id = data.get("id")
+            if not msg_id:
+                raise PostManSendError(f"Resend returned success but no id: {data}")
 
-        return SendResult(id=msg_id, raw=data)
+            return SendResult(id=msg_id, raw=data)
+
+        # Should be unreachable, but keep a safe fallback.
+        raise PostManSendError(f"Failed to send email after retries: {last_exc}")
 
     async def send_event_emails(
         self, *, participants: Sequence[ParticipantProtocol], event_id: int
@@ -211,6 +291,10 @@ class PostMan:
                 resend_id=result.id,
             )
             sent_to.append(participant.name or "")
+
+            # Smooth bursts to reduce chance of hitting provider rate limits.
+            if self._min_interval_seconds > 0:
+                await asyncio.sleep(self._min_interval_seconds)
 
         return sent_to, skipped
 
