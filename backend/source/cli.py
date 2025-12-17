@@ -2,14 +2,17 @@ import asyncio
 import datetime
 
 import click
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from source.celery_app import celery_app
 from source.database.connection import AsyncSessionLocal
-from source.database.models import Event
+from source.database.models import Assignment, Event, Participant
 from source.database.operations import get_event
 from source.settings import settings
 from source.tasks.draw import draw
 from source.utils.datetime import ensure_utc
+from source.utils.postman import PostMan
 
 
 def _parse_deadline(value: str) -> datetime.datetime:
@@ -68,6 +71,44 @@ def set_deadline(event_id: int, deadline: str, revoke_task_id: str | None, termi
         click.echo(f"Task has been revoked (UUID={revoke_task_id}) with termination set to: {terminate}.")
 
     _schedule_draw_task(event_id, new_deadline)
+
+
+@cli.command("resend-email")
+@click.argument("event_id", type=int)
+@click.argument("name", type=str)
+def resend_email(event_id: int, name: str) -> None:
+    async def _run() -> None:
+        async with AsyncSessionLocal() as session:
+            await _get_event_or_fail(session, event_id)
+
+            result = await session.execute(
+                select(Participant)
+                .options(
+                    selectinload(Participant.event),
+                    selectinload(Participant.given_assignments).selectinload(Assignment.receiver),
+                )
+                .where(Participant.event_id == event_id, Participant.name == name)
+            )
+            participant = result.scalar_one_or_none()
+
+            if participant is None:
+                raise click.ClickException(f"Participant '{name}' not found in event {event_id}")
+
+            if not participant.email:
+                raise click.ClickException(f"Participant '{name}' has no email address")
+
+            if not participant.given_assignments:
+                raise click.ClickException(f"Participant '{name}' has no assignment (draw not complete?)")
+
+            async with PostMan() as postman:
+                sent_to, skipped = await postman.send_event_emails(participants=[participant], event_id=event_id)
+
+            if sent_to:
+                click.echo(f"Email sent successfully to {participant.email}.")
+            else:
+                raise click.ClickException(f"Failed to send email to {participant.email}")
+
+    asyncio.run(_run())
 
 
 if __name__ == "__main__":
