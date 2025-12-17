@@ -38,7 +38,7 @@ def _schedule_draw_task(event_id: int, deadline: datetime.datetime) -> None:
     click.echo(f"New task has been scheduled. UUID={result.id}")
 
 
-@click.group(context_settings={"help_option_name": ["-h", "--help"]})
+@click.group(context_settings={"help_option_names": ["-h", "--help"]})
 def cli() -> None:
     pass
 
