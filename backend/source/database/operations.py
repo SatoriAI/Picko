@@ -148,18 +148,6 @@ async def get_event_participants_with_assignments(session: AsyncSession, *, even
     return list(result.scalars().all())
 
 
-async def update_participant(session: AsyncSession, *, participant_id: int, email: str | None) -> Participant | None:
-    if (participant := await session.get(Participant, participant_id)) is None:
-        return None
-
-    participant.email = email
-
-    await session.commit()
-    await session.refresh(participant)
-
-    return participant
-
-
 async def get_assignment_by_token(session: AsyncSession, *, reveal_token: str) -> Assignment | None:
     result = await session.execute(
         select(Assignment)

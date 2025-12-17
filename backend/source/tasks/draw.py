@@ -24,18 +24,13 @@ async def _draw_and_notify_async(event_id: int) -> dict[str, Any]:
             await execute_draw(session, event)
             draw_executed = True
 
-            # Expire all cached objects to force fresh load from database
-            session.expire_all()
+            session.expire_all()  # Expire all cached objects to force fresh load from database
 
             if (event := await get_event(session, event_id=event_id)) is None:
                 return {"status": "event_not_found_after_draw", "event_id": event_id}
 
         if not event.is_draw_complete:
-            return {
-                "status": "draw_not_complete",
-                "event_id": event_id,
-                "draw_executed": draw_executed,
-            }
+            return {"status": "draw_not_complete", "event_id": event_id, "draw_executed": draw_executed}
 
         participants = await get_event_participants_with_assignments(session, event_id=event_id)
 
