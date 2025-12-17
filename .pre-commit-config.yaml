@@ -37,4 +37,4 @@ repos:
       - id: codespell
         args:
           - --quiet-level=2  # Ignores less common suggestions.
-          - --skip=frontend/pnpm-lock.yaml,frontend/messages/pl.json
+          - --skip=frontend/pnpm-lock.yaml,frontend/messages/pl.json,backend/source/utils/templates/*
