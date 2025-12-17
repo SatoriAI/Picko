@@ -24,12 +24,18 @@
 <style>
 	.santa-hat {
 		position: absolute;
-		width: 20px;
-		height: 20px;
-		top: -8px;
-		left: 8px;
-		transform: rotate(-15deg);
+		/* Use em so it scales nicely with the emoji size */
+		width: var(--santa-hat-size, 1.08em);
+		height: var(--santa-hat-size, 1.08em);
+
+		/* Tune to sit on top of 🎁 across common emoji fonts */
+		top: var(--santa-hat-top, -0.34em);
+		left: var(--santa-hat-left, -0.02em);
+
+		transform-origin: 40% 70%;
+		transform: rotate(-18deg);
 		filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.15));
 		z-index: 10;
+		pointer-events: none;
 	}
 </style>
