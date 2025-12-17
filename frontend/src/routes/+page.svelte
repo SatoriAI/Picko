@@ -11,6 +11,7 @@
 		Input,
 		Select,
 		FormLabel,
+		FormError,
 		Button
 	} from '$lib/components';
 
@@ -21,6 +22,14 @@
 	let registrationDeadline = $state('');
 	let isSubmitting = $state(false);
 
+	// Form validation errors
+	let errors = $state<{
+		eventName?: string;
+		maxAmount?: string;
+		registrationDeadline?: string;
+		form?: string;
+	}>({});
+
 	// Currency options for select
 	const currencyOptions: Array<{ value: 'PLN' | 'USD' | 'EUR'; label: string }> = [
 		{ value: 'PLN', label: 'PLN' },
@@ -28,27 +37,46 @@
 		{ value: 'EUR', label: 'EUR' }
 	];
 
+	function validateForm(): boolean {
+		const newErrors: typeof errors = {};
+
+		// Validate event name
+		if (!eventName.trim()) {
+			newErrors.eventName = m.validation_event_name_required();
+		}
+
+		// Validate max amount (if provided)
+		const maxAmountRaw = String(maxAmount ?? '');
+		const maxAmountValue = maxAmountRaw.trim() ? Number(maxAmountRaw) : null;
+		if (maxAmountValue !== null && (!Number.isFinite(maxAmountValue) || maxAmountValue <= 0)) {
+			newErrors.maxAmount = m.validation_max_amount_invalid();
+		}
+
+		// Validate deadline
+		if (!registrationDeadline) {
+			newErrors.registrationDeadline = m.validation_deadline_required();
+		} else {
+			const deadlineDate = new Date(registrationDeadline);
+			if (deadlineDate <= new Date()) {
+				newErrors.registrationDeadline = m.validation_deadline_future();
+			}
+		}
+
+		errors = newErrors;
+		return Object.keys(newErrors).length === 0;
+	}
+
 	async function handleSubmit() {
-		if (!eventName.trim() || !registrationDeadline) {
-			alert(m.validation_error());
+		if (!validateForm()) {
 			return;
 		}
 
 		const maxAmountRaw = String(maxAmount ?? '');
 		const maxAmountValue = maxAmountRaw.trim() ? Number(maxAmountRaw) : null;
-		if (maxAmountValue !== null && (!Number.isFinite(maxAmountValue) || maxAmountValue <= 0)) {
-			alert(m.validation_error());
-			return;
-		}
-
-		// Validate deadline is in the future
-		const deadlineDate = new Date(registrationDeadline);
-		if (deadlineDate <= new Date()) {
-			alert(m.validation_deadline_future());
-			return;
-		}
 
 		isSubmitting = true;
+		errors = {};
+
 		try {
 			const created = await fetchJson<{ id: number; registration_token: string }>('/api/event', {
 				method: 'POST',
@@ -65,7 +93,7 @@
 			await goto(resolve(`/register/${created.registration_token}`));
 		} catch (err) {
 			console.error('Create event request failed', err);
-			alert(m.validation_error());
+			errors = { form: m.validation_error() };
 		} finally {
 			isSubmitting = false;
 		}
@@ -139,6 +167,16 @@
 				<h2 class="mb-6 text-center text-xl font-semibold text-slate-800 dark:text-white">
 					{m.form_title()}
 				</h2>
+
+				<!-- Form-level error -->
+				{#if errors.form}
+					<div
+						class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400"
+					>
+						{errors.form}
+					</div>
+				{/if}
+
 				<form
 					onsubmit={(e) => {
 						e.preventDefault();
@@ -147,7 +185,13 @@
 				>
 					<div class="mb-4">
 						<FormLabel for="eventName">{m.label_event_name()}</FormLabel>
-						<Input id="eventName" bind:value={eventName} placeholder={m.placeholder_event_name()} />
+						<Input
+							id="eventName"
+							bind:value={eventName}
+							placeholder={m.placeholder_event_name()}
+							error={!!errors.eventName}
+						/>
+						<FormError message={errors.eventName} />
 					</div>
 
 					<div class="mb-4">
@@ -161,6 +205,7 @@
 								bind:value={maxAmount}
 								placeholder={m.placeholder_max_amount()}
 								min="1"
+								error={!!errors.maxAmount}
 								class="no-number-spin rounded-r-none border-r-0"
 							/>
 							<Select
@@ -171,6 +216,7 @@
 								class="w-[120px] rounded-l-none border-l-0"
 							/>
 						</div>
+						<FormError message={errors.maxAmount} />
 					</div>
 
 					<div class="mb-4">
@@ -186,10 +232,15 @@
 							type="datetime-local"
 							id="registrationDeadline"
 							bind:value={registrationDeadline}
+							error={!!errors.registrationDeadline}
 						/>
-						<span class="mt-1.5 block text-xs text-slate-400 dark:text-slate-500">
-							{m.label_deadline_hint()}
-						</span>
+						{#if errors.registrationDeadline}
+							<FormError message={errors.registrationDeadline} />
+						{:else}
+							<span class="mt-1.5 block text-xs text-slate-400 dark:text-slate-500">
+								{m.label_deadline_hint()}
+							</span>
+						{/if}
 					</div>
 
 					<Button type="submit" disabled={isSubmitting}>

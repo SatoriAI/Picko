@@ -5,6 +5,7 @@
 	import { resolve } from '$app/paths';
 	import { formatDateLong } from '$lib/utils/date';
 	import { fetchJson } from '$lib/api/client';
+	import { DEFAULT_CURRENCY } from '$lib/constants';
 	import {
 		PageLayout,
 		Card,
@@ -12,14 +13,15 @@
 		TextArea,
 		Select,
 		FormLabel,
+		FormError,
 		Button,
 		Chip
 	} from '$lib/components';
-	import type { EventData } from './+page';
+	import type { RegistrationEventData } from '$lib/types';
 
 	// Props from loader
 	let { data } = $props();
-	const event: EventData = data.event;
+	const event: RegistrationEventData = data.event;
 	const token: string = data.token;
 
 	// Form state
@@ -28,6 +30,12 @@
 	let language = $state(getLocale() === 'pl' ? 'pl' : 'en');
 	let wishlist = $state('');
 	let isSubmitting = $state(false);
+
+	// Form validation errors
+	let errors = $state<{
+		name?: string;
+		form?: string;
+	}>({});
 
 	// Language options
 	const languageOptions = [
@@ -46,13 +54,25 @@
 			.filter((item) => item.length > 0)
 	);
 
-	async function handleSubmit() {
+	function validateForm(): boolean {
+		const newErrors: typeof errors = {};
+
 		if (!name.trim()) {
-			alert(m.validation_error());
+			newErrors.name = m.validation_name_required();
+		}
+
+		errors = newErrors;
+		return Object.keys(newErrors).length === 0;
+	}
+
+	async function handleSubmit() {
+		if (!validateForm()) {
 			return;
 		}
 
 		isSubmitting = true;
+		errors = {};
+
 		try {
 			const result = await fetchJson<{ event_id: number; access_token: string }>(
 				`/api/event/register/${token}`,
@@ -71,7 +91,7 @@
 			await goto(resolve(`/my/${result.access_token}`));
 		} catch (err) {
 			console.error('Registration failed', err);
-			alert(m.registration_failed());
+			errors = { form: m.registration_failed() };
 		} finally {
 			isSubmitting = false;
 		}
@@ -128,7 +148,7 @@
 								<span>💰</span>
 								<span>
 									{m.join_budget()}:
-									<strong>{event.maxAmount} {event.currency ?? 'PLN'}</strong>
+									<strong>{event.maxAmount} {event.currency ?? DEFAULT_CURRENCY}</strong>
 								</span>
 							</div>
 						{/if}
@@ -150,6 +170,15 @@
 
 				<!-- Registration Form -->
 				<Card class="p-6">
+					<!-- Form-level error -->
+					{#if errors.form}
+						<div
+							class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400"
+						>
+							{errors.form}
+						</div>
+					{/if}
+
 					<form
 						onsubmit={(e) => {
 							e.preventDefault();
@@ -158,7 +187,13 @@
 					>
 						<div class="mb-4">
 							<FormLabel for="name">{m.label_name()}</FormLabel>
-							<Input id="name" bind:value={name} placeholder={m.placeholder_name()} required />
+							<Input
+								id="name"
+								bind:value={name}
+								placeholder={m.placeholder_name()}
+								error={!!errors.name}
+							/>
+							<FormError message={errors.name} />
 						</div>
 
 						<div class="mb-4">

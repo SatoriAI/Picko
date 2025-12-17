@@ -2,23 +2,25 @@
 	import * as m from '$lib/paraglide/messages';
 	import { getLocale } from '$lib/paraglide/runtime';
 	import { formatDateLong } from '$lib/utils/date';
-	import { createFeedbackState } from '$lib/utils/feedback.svelte';
-	import { onMount, onDestroy } from 'svelte';
-	import { PageLayout, Card, Chip, Button, Input, CheckIcon, CopyIcon } from '$lib/components';
-	import type { EventData } from './+page';
+	import { DEFAULT_CURRENCY } from '$lib/constants';
+	import {
+		PageLayout,
+		Card,
+		Chip,
+		Input,
+		CheckIcon,
+		CountdownTimer,
+		WishlistDisplay,
+		StepBadge,
+		CopyButton
+	} from '$lib/components';
+	import type { EventData } from '$lib/types';
 
 	// Props from loader
 	let { data } = $props();
 
 	// Event data from loader (reactive to allow updates)
 	let event = $state<EventData>(data.event);
-
-	// Feedback states using the utility
-	const linkCopied = createFeedbackState(2500);
-
-	// Countdown state
-	let countdown = $state({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-	let countdownInterval: ReturnType<typeof setInterval> | null = null;
 
 	// Derived states
 	let deadlinePassed = $derived(new Date(event.registrationDeadline) <= new Date());
@@ -28,52 +30,9 @@
 			: `/register/${event.registrationToken}`
 	);
 
-	// Calculate countdown
-	function updateCountdown() {
-		const now = new Date().getTime();
-		const deadline = new Date(event.registrationDeadline).getTime();
-		const diff = deadline - now;
-
-		if (diff <= 0) {
-			countdown = { days: 0, hours: 0, minutes: 0, seconds: 0 };
-			if (countdownInterval) {
-				clearInterval(countdownInterval);
-				countdownInterval = null;
-				// Reload to trigger draw
-				window.location.reload();
-			}
-			return;
-		}
-
-		countdown = {
-			days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-			hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-			minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-			seconds: Math.floor((diff % (1000 * 60)) / 1000)
-		};
-	}
-
-	onMount(() => {
-		updateCountdown();
-		if (!deadlinePassed) {
-			countdownInterval = setInterval(updateCountdown, 1000);
-		}
-	});
-
-	onDestroy(() => {
-		if (countdownInterval) {
-			clearInterval(countdownInterval);
-		}
-	});
-
-	// Copy registration link
-	async function copyRegistrationLink() {
-		try {
-			await navigator.clipboard.writeText(registrationUrl);
-			linkCopied.trigger();
-		} catch (err) {
-			console.error('Failed to copy:', err);
-		}
+	// Handle countdown completion
+	function handleCountdownComplete() {
+		window.location.reload();
 	}
 </script>
 
@@ -95,11 +54,7 @@
 		<!-- STEP 1: Event Summary Card -->
 		<Card class="p-6">
 			<h2 class="mb-5 flex items-center gap-3 text-lg font-semibold text-slate-800 dark:text-white">
-				<span
-					class="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-500 text-sm font-bold text-white shadow-md shadow-emerald-400/35"
-				>
-					1
-				</span>
+				<StepBadge step={1} color="emerald" />
 				{m.admin_event_summary()}
 			</h2>
 
@@ -119,7 +74,7 @@
 						</span>
 						<span class="text-xl font-semibold text-slate-800 dark:text-white">
 							{event.maxAmount ?? '—'}
-							{event.maxAmount ? (event.currency ?? m.currency_suffix()) : ''}
+							{event.maxAmount ? (event.currency ?? DEFAULT_CURRENCY) : ''}
 						</span>
 					</div>
 					<div class="rounded-xl bg-slate-50 p-4 dark:bg-slate-700/50">
@@ -156,11 +111,7 @@
 				<h2
 					class="mb-2 flex items-center gap-3 text-lg font-semibold text-slate-800 dark:text-white"
 				>
-					<span
-						class="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-sm font-bold text-white shadow-md shadow-orange-400/35"
-					>
-						2
-					</span>
+					<StepBadge step={2} color="amber" />
 					{m.share_link_title()}
 				</h2>
 				<p class="mb-5 text-sm text-slate-500 dark:text-slate-400">
@@ -175,47 +126,18 @@
 						readonly
 						class="flex-1 font-mono text-sm"
 					/>
-					<Button
-						variant="outline"
-						onclick={copyRegistrationLink}
-						class={linkCopied.active ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600' : ''}
-					>
-						{#if linkCopied.active}
-							<CheckIcon class="h-4 w-4" />
-						{:else}
-							<CopyIcon class="h-4 w-4" />
-						{/if}
-						<span>{linkCopied.active ? m.admin_copied() : m.admin_copy_link()}</span>
-					</Button>
+					<CopyButton text={registrationUrl} />
 				</div>
 
 				<!-- Countdown Timer -->
-				<div class="rounded-xl bg-gradient-to-br from-orange-500 to-pink-500 p-6 text-white">
-					<h3 class="mb-4 text-center text-sm font-medium uppercase tracking-wide opacity-90">
-						{m.countdown_title()}
-					</h3>
-					<div class="grid grid-cols-4 gap-2 text-center">
-						<div>
-							<div class="text-3xl font-bold sm:text-4xl">{countdown.days}</div>
-							<div class="text-xs uppercase opacity-75">{m.countdown_days()}</div>
-						</div>
-						<div>
-							<div class="text-3xl font-bold sm:text-4xl">{countdown.hours}</div>
-							<div class="text-xs uppercase opacity-75">{m.countdown_hours()}</div>
-						</div>
-						<div>
-							<div class="text-3xl font-bold sm:text-4xl">{countdown.minutes}</div>
-							<div class="text-xs uppercase opacity-75">{m.countdown_minutes()}</div>
-						</div>
-						<div>
-							<div class="text-3xl font-bold sm:text-4xl">{countdown.seconds}</div>
-							<div class="text-xs uppercase opacity-75">{m.countdown_seconds()}</div>
-						</div>
-					</div>
-					<p class="mt-4 text-center text-sm opacity-90">
-						{m.draw_at_deadline()}
-					</p>
-				</div>
+				<CountdownTimer
+					deadline={event.registrationDeadline}
+					onComplete={handleCountdownComplete}
+					variant="gradient"
+				/>
+				<p class="mt-4 text-center text-sm text-white/90">
+					{m.draw_at_deadline()}
+				</p>
 			</Card>
 		{:else if !event.isDrawComplete}
 			<!-- Waiting for draw (deadline passed but not enough participants) -->
@@ -236,11 +158,7 @@
 				<h2
 					class="mb-4 flex items-center gap-3 text-lg font-semibold text-slate-800 dark:text-white"
 				>
-					<span
-						class="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-rose-400 to-rose-500 text-sm font-bold text-white shadow-md shadow-rose-400/35"
-					>
-						{!deadlinePassed || !event.isDrawComplete ? 3 : 2}
-					</span>
+					<StepBadge step={!deadlinePassed || !event.isDrawComplete ? 3 : 2} color="rose" />
 					{m.registered_participants()}
 				</h2>
 
@@ -264,22 +182,11 @@
 							</div>
 							{#if participant.wishlist}
 								<div class="mt-2">
-									<span
-										class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
-									>
-										{m.wishlist_label()}:
-									</span>
-									<div class="mt-1 flex flex-wrap gap-1">
-										{#each participant.wishlist.split(',').map((w) => w.trim()) as wish (wish)}
-											{#if wish}
-												<span
-													class="rounded-full bg-white px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-600 dark:text-slate-300"
-												>
-													🎁 {wish}
-												</span>
-											{/if}
-										{/each}
-									</div>
+									<WishlistDisplay
+										wishlist={participant.wishlist}
+										variant="compact"
+										label={m.wishlist_label()}
+									/>
 								</div>
 							{/if}
 						</div>

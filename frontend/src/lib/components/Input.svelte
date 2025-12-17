@@ -9,6 +9,7 @@
 		min?: string;
 		readonly?: boolean;
 		required?: boolean;
+		error?: boolean;
 		class?: string;
 	}
 
@@ -20,10 +21,21 @@
 		min,
 		readonly = false,
 		required = false,
+		error = false,
 		class: className = ''
 	}: Props = $props();
 
-	let fieldClasses = $derived(getFormFieldClasses(className));
+	let fieldClasses = $derived(getFormFieldClasses(className, error));
 </script>
 
-<input {type} {id} bind:value {placeholder} {min} {readonly} {required} class={fieldClasses} />
+<input
+	{type}
+	{id}
+	bind:value
+	{placeholder}
+	{min}
+	{readonly}
+	{required}
+	aria-invalid={error || undefined}
+	class={fieldClasses}
+/>

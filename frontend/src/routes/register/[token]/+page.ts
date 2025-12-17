@@ -1,39 +1,8 @@
 import type { PageLoad } from './$types';
 import { error } from '@sveltejs/kit';
+import type { RegistrationEventData, BackendEvent } from '$lib/types';
 
-export interface EventData {
-	id: number;
-	name: string;
-	maxAmount: number | null;
-	date: string | null;
-	currency: string | null;
-	registrationDeadline: string;
-	registrationToken: string;
-	isDrawComplete: boolean;
-	participants: Array<{
-		id: number;
-		name: string;
-		wishlist: string | null;
-	}>;
-}
-
-interface BackendEvent {
-	id: number;
-	name: string;
-	max_amount: number | null;
-	date: string | null;
-	currency: string | null;
-	registration_deadline: string;
-	registration_token: string;
-	is_draw_complete: boolean;
-	participants: Array<{
-		id: number;
-		name: string;
-		email: string | null;
-		language: string;
-		wishlist: string | null;
-	}>;
-}
+export type { RegistrationEventData as EventData };
 
 export const load: PageLoad = async ({ params, fetch }) => {
 	const response = await fetch(`/api/event/register/${params.token}`);
@@ -47,7 +16,8 @@ export const load: PageLoad = async ({ params, fetch }) => {
 
 	const backendEvent = (await response.json()) as BackendEvent;
 
-	const event: EventData = {
+	// Transform to frontend format (registration page only needs summary participant info)
+	const event: RegistrationEventData = {
 		id: backendEvent.id,
 		name: backendEvent.name,
 		maxAmount: backendEvent.max_amount,

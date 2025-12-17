@@ -1,17 +1,8 @@
 import type { PageLoad } from './$types';
 import { error } from '@sveltejs/kit';
+import type { AssignmentData } from '$lib/types';
 
-export interface AssignmentData {
-	giver_name: string;
-	receiver_name: string;
-	receiver_wishlist: string | null;
-	event: {
-		name: string;
-		date: string | null;
-		max_amount: number | null;
-		currency: string | null;
-	};
-}
+export type { AssignmentData };
 
 export const load: PageLoad = async ({ params, fetch }) => {
 	const response = await fetch(`/api/draw/reveal/${params.token}`);
