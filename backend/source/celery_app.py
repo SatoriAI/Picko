@@ -4,6 +4,9 @@ from kombu import Queue
 from source.settings import settings
 
 celery_app = Celery("picko", broker=settings.redis_url)
+celery_app.conf.broker_transport_options = {
+    "visibility_timeout": settings.celery_visibility_timeout_seconds,
+}
 
 celery_app.conf.task_queues = (Queue("default"),)
 celery_app.conf.task_default_queue = "default"

@@ -10,16 +10,16 @@ from source.settings import CurrencySelection, LanguageSelection
 from source.utils.distribution import generate_derangement
 
 
-async def get_event(session: AsyncSession, *, event_id: int) -> Event | None:
-    result = await session.execute(
-        select(Event)
-        .options(
-            selectinload(Event.participants).selectinload(Participant.given_assignments),
-            selectinload(Event.draws),
-        )
-        .where(Event.id == event_id)
+async def get_event(session: AsyncSession, *, event_id: int, lock: bool = False) -> Event | None:
+    query = select(Event)
+    if lock:
+        query = query.with_for_update()
+    query = query.options(
+        selectinload(Event.participants).selectinload(Participant.given_assignments),
+        selectinload(Event.draws),
     )
-    return result.scalar_one_or_none()
+    query = query.where(Event.id == event_id)
+    return (await session.execute(query)).scalar_one_or_none()
 
 
 async def get_event_by_registration_token(session: AsyncSession, *, registration_token: str) -> Event | None:

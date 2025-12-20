@@ -37,6 +37,7 @@ class Event(Base):
     registration_deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     registration_token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     is_draw_complete: Mapped[bool] = mapped_column(Boolean(), default=False, nullable=False)
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # SQL Alchemy Relations
     participants: Mapped[list["Participant"]] = relationship(back_populates="event", cascade="all, delete-orphan")
