@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     resend_max_retry_sleep_seconds: float = 20.0
     resend_min_interval_seconds: float = 0.0
 
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """CORS_ORIGINS is a comma-separated string; split it into the list CORSMiddleware expects."""
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
     # Manually set variables
     app_name: str = "Picko"
     default_worker_concurrency: int = 4
