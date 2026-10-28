@@ -21,13 +21,9 @@ function onRailway(...names: string[]) {
 
 const REGION = { 'europe-west4-drams3a': 1 }
 
-// The paths are the ones the deployed services build from today, written against the
-// repository root even though each service's root directory is `/backend` or `/frontend`.
-// They are kept as they are rather than "corrected" to `./Dockerfile`, so the migration
-// changes where the settings live and nothing about what gets built.
-function dockerfile(dockerfilePath: string) {
-  return { buildEnvironment: 'V3', builder: 'DOCKERFILE', dockerfilePath } as const
-}
+// A service setting's `dockerfilePath` resolves against the service's root directory
+// (`/backend` or `/frontend`), so `./Dockerfile` names the same file the tomls built from.
+const DOCKERFILE = { buildEnvironment: 'V3', builder: 'DOCKERFILE', dockerfilePath: './Dockerfile' } as const
 
 const RESTART = { restartPolicyType: 'ON_FAILURE', restartPolicyMaxRetries: 5 } as const
 
@@ -37,7 +33,7 @@ export default defineRailway(() => {
 
   const api = service('Picko', {
     source: picko('/backend'),
-    build: dockerfile('./backend/Dockerfile'),
+    build: DOCKERFILE,
     // `sh -c`, because a start command gets no shell and `$PORT` would arrive literally.
     start: "sh -c 'uv run --no-sync --no-dev gunicorn -k uvicorn.workers.UvicornWorker source.app:app --bind 0.0.0.0:$PORT --workers 1'",
     preDeploy: 'uv run --no-sync --no-dev alembic upgrade head',
@@ -56,7 +52,7 @@ export default defineRailway(() => {
   // Never sleeps: it consumes the Redis queue, and a sleeping consumer takes no work.
   const worker = service('Picko-Worker', {
     source: picko('/backend'),
-    build: dockerfile('./backend/Dockerfile'),
+    build: DOCKERFILE,
     start: 'uv run --no-sync --no-dev celery -A source.celery_app:celery_app worker -l info',
     deploy: RESTART,
     replicas: REGION,
@@ -73,7 +69,7 @@ export default defineRailway(() => {
 
   const ui = service('Picko-UI', {
     source: picko('/frontend'),
-    build: dockerfile('./frontend/Dockerfile'),
+    build: DOCKERFILE,
     start: 'node build',
     healthcheck: '/',
     deploy: { ...RESTART, sleepApplication: true },
