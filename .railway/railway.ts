@@ -25,7 +25,9 @@ const REGION = { 'europe-west4-drams3a': 1 }
 // (`/backend` or `/frontend`), so `./Dockerfile` names the same file the tomls built from.
 const DOCKERFILE = { buildEnvironment: 'V3', builder: 'DOCKERFILE', dockerfilePath: './Dockerfile' } as const
 
-const RESTART = { restartPolicyType: 'ON_FAILURE', restartPolicyMaxRetries: 5 } as const
+// `ON_FAILURE` is Railway's default restart policy and the API stores it as null, so
+// naming it would leave a change in every plan. Only the retry count is set.
+const RESTART = { restartPolicyMaxRetries: 5 } as const
 
 export default defineRailway(() => {
   const picko = (rootDirectory: string) =>
