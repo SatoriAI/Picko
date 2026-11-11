@@ -140,8 +140,8 @@ def set_email(event_id: int, name: str, email: str) -> None:
 
     async def _run() -> None:
         async with AsyncSessionLocal() as session:
-            # Wait for a draw task that is sending emails, so its outcome (notified_at) is known before deciding
-            # whether this participant still needs a manual resend.
+            # The draw task takes this lock for its last step, deciding whether anyone still waits for an email. So
+            # it either sees the new address and emails it, or has closed the event already and that shows here.
             event = await _get_event_or_fail(session, event_id, lock=True)
             participant = await _get_participant_or_fail(session, event_id, name)
             old_email = participant.email
@@ -149,7 +149,7 @@ def set_email(event_id: int, name: str, email: str) -> None:
             await session.commit()
 
         click.echo(f"Email of '{name}' in event {event_id} changed: {old_email or '<none>'} -> {new_email}.")
-        if event.notified_at is not None:
+        if event.notified_at is not None or participant.notified_at is not None:
             command = shlex.join(
                 ["uv", "run", "--no-sync", "python", "-m", "source.cli", "resend-email", str(event_id), name]
             )
@@ -166,8 +166,7 @@ def set_email(event_id: int, name: str, email: str) -> None:
 def delete_participant(event_id: int, name: str) -> None:
     async def _run() -> None:
         async with AsyncSessionLocal() as session:
-            # Serialises with the draw task, which locks the same row. The HTTP-triggered draws do not lock, but they
-            # cannot leave a partial draw either: their Draw/Assignment inserts conflict with this lock or fail the FK.
+            # Serialises with the draw, which locks the same row wherever it is triggered from.
             event = await _get_event_or_fail(session, event_id, lock=True)
             if event.is_draw_complete:
                 raise click.ClickException(

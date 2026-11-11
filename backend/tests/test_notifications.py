@@ -4,7 +4,9 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
+from sqlalchemy import text
 
+from source.database.connection import ENGINE
 from source.settings import LanguageSelection
 from source.tasks.draw import draw_and_notify
 from source.utils.postman import PostMan, PostManSendError
@@ -20,6 +22,7 @@ class FakeResend:
     def __init__(self) -> None:
         self.rejected: set[str] = set()
         self.delivered: list[dict] = []
+        self.handler = self.handle
 
     def handle(self, request: httpx.Request) -> httpx.Response:
         payload = json.loads(request.content)
@@ -33,7 +36,7 @@ class FakeResend:
         return [payload["to"][0] for payload in self.delivered]
 
     def postman(self) -> PostMan:
-        return PostMan(client=httpx.AsyncClient(transport=httpx.MockTransport(self.handle)))
+        return PostMan(client=httpx.AsyncClient(transport=httpx.MockTransport(self.handler)))
 
 
 @pytest.fixture
@@ -100,3 +103,22 @@ async def test_a_rerun_emails_only_the_participants_whose_send_failed(client, re
     assert third["status"] == "already_notified"
     assert resend.delivered == []
     assert len(await fetch_all("SELECT id FROM draw")) == 1
+
+
+async def test_an_address_added_while_emails_go_out_is_emailed_before_the_event_closes(client, resend):
+    event = await create_event_with_participants(client, ["Ann", "Bob"])
+    await register(client, event["registration_token"], "Late")
+    await close_registration(event["id"])
+
+    async def add_an_address_during_the_first_send(request: httpx.Request) -> httpx.Response:
+        if not resend.delivered:
+            async with ENGINE.begin() as connection:
+                await connection.execute(text("UPDATE participant SET email = 'late@example.com' WHERE name = 'Late'"))
+        return resend.handle(request)
+
+    resend.handler = add_an_address_during_the_first_send
+    result = await draw_and_notify(event["id"])
+
+    assert result["status"] == "emails_sent"
+    assert sorted(resend.recipients) == ["ann@example.com", "bob@example.com", "late@example.com"]
+    assert (await fetch_all("SELECT notified_at FROM event"))[0].notified_at is not None

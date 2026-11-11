@@ -12,11 +12,13 @@ from source.utils.distribution import generate_derangement
 MIN_PARTICIPANTS_FOR_DRAW = 2
 
 
-async def get_event(session: AsyncSession, *, event_id: int) -> Event | None:
-    result = await session.execute(
+async def get_event(session: AsyncSession, *, event_id: int, lock: bool = False) -> Event | None:
+    query = (
         select(Event).options(selectinload(Event.participants), selectinload(Event.draws)).where(Event.id == event_id)
     )
-    return result.scalar_one_or_none()
+    if lock:
+        query = query.with_for_update()
+    return (await session.execute(query)).scalar_one_or_none()
 
 
 async def get_event_by_registration_token(
@@ -180,9 +182,22 @@ async def claim_unnotified_participant(session: AsyncSession, *, participant_id:
     return result.scalar_one_or_none()
 
 
-async def mark_event_notified(session: AsyncSession, *, event_id: int) -> None:
+async def mark_event_notified_if_nobody_is_waiting(session: AsyncSession, *, event_id: int) -> bool:
+    """
+    Close the event's notifications unless a participant still needs an email. Returns whether it was closed.
+
+    Checked under the event lock, which `set-email` in the CLI also takes: an address added while emails were going
+    out is either seen here, or arrives after the event is closed and the CLI says so.
+    """
+    await session.execute(select(Event.id).where(Event.id == event_id).with_for_update())
+
+    if await get_unnotified_participant_ids(session, event_id=event_id):
+        await session.commit()
+        return False
+
     await session.execute(update(Event).where(Event.id == event_id).values(notified_at=datetime.now(UTC)))
     await session.commit()
+    return True
 
 
 async def get_assignment_by_token(session: AsyncSession, *, reveal_token: str) -> Assignment | None:

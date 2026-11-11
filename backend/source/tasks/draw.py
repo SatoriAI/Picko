@@ -12,7 +12,7 @@ from source.database.operations import (
     execute_draw_if_due,
     get_event,
     get_unnotified_participant_ids,
-    mark_event_notified,
+    mark_event_notified_if_nobody_is_waiting,
 )
 from source.settings import settings
 from source.utils.postman import PostMan, PostManSendError
@@ -73,13 +73,28 @@ async def draw_and_notify(event_id: int) -> dict[str, Any]:
         if not event.is_draw_complete:
             return {"status": "draw_not_complete", "event_id": event_id, "draw_executed": draw_executed}
 
-        sent, failed = await _email_unnotified_participants(session, event_id=event_id)
+        sent = 0
+        notified = False
+        while True:
+            sent_now, failed = await _email_unnotified_participants(session, event_id=event_id)
+            sent += sent_now
+            if failed:
+                break
+            if notified := await mark_event_notified_if_nobody_is_waiting(session, event_id=event_id):
+                break
+            if sent_now == 0:
+                # Whoever is left is claimed by another run of this task, which closes the event when it is done.
+                break
 
-        if failed == 0:
-            await mark_event_notified(session, event_id=event_id)
+    if notified:
+        status = "emails_sent"
+    elif failed:
+        status = "emails_failed"
+    else:
+        status = "emails_in_progress_elsewhere"
 
     return {
-        "status": "emails_sent" if failed == 0 else "emails_failed",
+        "status": status,
         "event_id": event_id,
         "draw_executed": draw_executed,
         "sent": sent,
