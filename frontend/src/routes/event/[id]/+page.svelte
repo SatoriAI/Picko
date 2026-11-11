@@ -166,16 +166,9 @@
 					{#each event.participants as participant (participant.id)}
 						<div class="rounded-lg bg-slate-50 p-4 dark:bg-slate-700/50">
 							<div class="flex items-center justify-between">
-								<div>
-									<span class="font-medium text-slate-800 dark:text-white">
-										{participant.name}
-									</span>
-									{#if participant.email}
-										<span class="ml-2 text-sm text-slate-500 dark:text-slate-400">
-											({participant.email})
-										</span>
-									{/if}
-								</div>
+								<span class="font-medium text-slate-800 dark:text-white">
+									{participant.name}
+								</span>
 								<Chip>
 									{participant.language === 'pl' ? '🇵🇱' : '🇬🇧'}
 								</Chip>

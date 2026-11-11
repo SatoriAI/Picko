@@ -1,7 +1,7 @@
 import secrets
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -9,29 +9,28 @@ from source.database.models import Assignment, Draw, Event, Participant
 from source.settings import CurrencySelection, LanguageSelection
 from source.utils.distribution import generate_derangement
 
-
-async def get_event(session: AsyncSession, *, event_id: int, lock: bool = False) -> Event | None:
-    query = select(Event)
-    if lock:
-        query = query.with_for_update()
-    query = query.options(
-        selectinload(Event.participants).selectinload(Participant.given_assignments),
-        selectinload(Event.draws),
-    )
-    query = query.where(Event.id == event_id)
-    return (await session.execute(query)).scalar_one_or_none()
+MIN_PARTICIPANTS_FOR_DRAW = 2
 
 
-async def get_event_by_registration_token(session: AsyncSession, *, registration_token: str) -> Event | None:
+async def get_event(session: AsyncSession, *, event_id: int) -> Event | None:
     result = await session.execute(
-        select(Event)
-        .options(
-            selectinload(Event.participants).selectinload(Participant.given_assignments),
-            selectinload(Event.draws),
-        )
-        .where(Event.registration_token == registration_token)
+        select(Event).options(selectinload(Event.participants), selectinload(Event.draws)).where(Event.id == event_id)
     )
     return result.scalar_one_or_none()
+
+
+async def get_event_by_registration_token(
+    session: AsyncSession, *, registration_token: str, lock: bool = False
+) -> Event | None:
+    query = (
+        select(Event)
+        .options(selectinload(Event.participants), selectinload(Event.draws))
+        .where(Event.registration_token == registration_token)
+    )
+    if lock:
+        # Shared: registrations do not queue behind each other, but all of them queue behind a draw's FOR UPDATE.
+        query = query.with_for_update(read=True)
+    return (await session.execute(query)).scalar_one_or_none()
 
 
 async def create_event(
@@ -58,12 +57,7 @@ async def create_event(
 
     # Reload with all relationships to avoid lazy loading issues
     result = await session.execute(
-        select(Event)
-        .options(
-            selectinload(Event.participants).selectinload(Participant.given_assignments),
-            selectinload(Event.draws),
-        )
-        .where(Event.id == event.id)
+        select(Event).options(selectinload(Event.participants), selectinload(Event.draws)).where(Event.id == event.id)
     )
     return result.scalar_one()
 
@@ -91,35 +85,54 @@ async def register_participant(
     return participant
 
 
-async def execute_draw(session: AsyncSession, event: Event) -> None:
-    if event.is_draw_complete:
-        return  # Already done
+def is_draw_due(event: Event, *, participant_count: int) -> bool:
+    return (
+        not event.is_draw_complete
+        and datetime.now(UTC) > event.registration_deadline
+        and participant_count >= MIN_PARTICIPANTS_FOR_DRAW
+    )
 
-    result = await session.execute(select(Participant).where(Participant.event_id == event.id).order_by(Participant.id))
+
+async def execute_draw_if_due(session: AsyncSession, *, event_id: int) -> bool:
+    """
+    Run the event's draw unless it already ran or is not due yet. Returns whether this call ran it.
+
+    The event row is locked before anything is checked, so concurrent callers queue here and every one after the
+    first finds the draw complete. The transaction ends either way, which releases the lock.
+    """
+    event = (
+        await session.execute(
+            select(Event).where(Event.id == event_id).with_for_update().execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
+    if event is None:
+        await session.commit()
+        return False
+
+    result = await session.execute(select(Participant).where(Participant.event_id == event_id).order_by(Participant.id))
     participants = list(result.scalars().all())
 
-    if len(participants) < 2:
-        return  # Not enough participants
+    if not is_draw_due(event, participant_count=len(participants)):
+        await session.commit()
+        return False
 
-    # Create the draw
-    draw = Draw(event_id=event.id)
+    draw = Draw(event_id=event_id)
     session.add(draw)
     await session.flush()
 
-    # Generate derangement and create assignments
-    pairs = generate_derangement(participants)
-    for giver, receiver in pairs:
-        assignment = Assignment(
+    session.add_all(
+        Assignment(
             draw_id=draw.id,
             giver_id=giver.id,
             receiver_id=receiver.id,
             reveal_token=secrets.token_urlsafe(32),
         )
-        session.add(assignment)
+        for giver, receiver in generate_derangement(participants)
+    )
 
-    # Mark event as draw complete
     event.is_draw_complete = True
     await session.commit()
+    return True
 
 
 async def get_event_and_maybe_draw(session: AsyncSession, *, event_id: int) -> Event | None:
@@ -127,25 +140,49 @@ async def get_event_and_maybe_draw(session: AsyncSession, *, event_id: int) -> E
     if event is None:
         return None
 
-    now = datetime.now(UTC)
-    if not event.is_draw_complete and now > event.registration_deadline and len(event.participants) >= 2:
-        await execute_draw(session, event)
-        # Reload to get the new assignments
+    # Unlocked look first, so an ordinary read never waits on the event row.
+    if is_draw_due(event, participant_count=len(event.participants)):
+        await execute_draw_if_due(session, event_id=event_id)
+        session.expire_all()
         event = await get_event(session, event_id=event_id)
 
     return event
 
 
-async def get_event_participants_with_assignments(session: AsyncSession, *, event_id: int) -> list[Participant]:
+async def get_unnotified_participant_ids(session: AsyncSession, *, event_id: int) -> list[int]:
+    """Participants who have an assignment and an email address but were not emailed yet."""
     result = await session.execute(
-        select(Participant)
-        .options(
-            selectinload(Participant.given_assignments).selectinload(Assignment.receiver),
-            selectinload(Participant.event),
+        select(Participant.id)
+        .join(Assignment, Assignment.giver_id == Participant.id)
+        .where(
+            Participant.event_id == event_id,
+            Participant.email.is_not(None),
+            Participant.notified_at.is_(None),
         )
-        .where(Participant.event_id == event_id)
+        .order_by(Participant.id)
     )
     return list(result.scalars().all())
+
+
+async def claim_unnotified_participant(session: AsyncSession, *, participant_id: int) -> Participant | None:
+    """
+    Lock a participant for emailing until the transaction ends.
+
+    Returns None when the participant was already emailed or another run holds the claim right now.
+    """
+    result = await session.execute(
+        select(Participant)
+        .options(selectinload(Participant.given_assignments))
+        .where(Participant.id == participant_id, Participant.notified_at.is_(None))
+        .with_for_update(skip_locked=True)
+        .execution_options(populate_existing=True)
+    )
+    return result.scalar_one_or_none()
+
+
+async def mark_event_notified(session: AsyncSession, *, event_id: int) -> None:
+    await session.execute(update(Event).where(Event.id == event_id).values(notified_at=datetime.now(UTC)))
+    await session.commit()
 
 
 async def get_assignment_by_token(session: AsyncSession, *, reveal_token: str) -> Assignment | None:

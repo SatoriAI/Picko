@@ -14,7 +14,7 @@ from source.database.operations import get_event
 from source.settings import settings
 from source.tasks.draw import draw
 from source.utils.datetime import ensure_utc
-from source.utils.postman import PostMan
+from source.utils.postman import PostMan, PostManSendError
 
 _EMAIL = TypeAdapter(EmailStr)
 
@@ -121,12 +121,12 @@ def resend_email(event_id: int, name: str) -> None:
                 raise click.ClickException(f"Participant '{name}' has no assignment (draw not complete?)")
 
             async with PostMan() as postman:
-                sent_to, skipped = await postman.send_event_emails(participants=[participant], event_id=event_id)
+                try:
+                    await postman.send_assignment_email(participant, event_id=event_id)
+                except PostManSendError as exc:
+                    raise click.ClickException(f"Failed to send email to {participant.email}: {exc}") from exc
 
-            if sent_to:
-                click.echo(f"Email sent successfully to {participant.email}.")
-            else:
-                raise click.ClickException(f"Failed to send email to {participant.email}")
+            click.echo(f"Email sent successfully to {participant.email}.")
 
     asyncio.run(_run())
 

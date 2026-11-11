@@ -5,7 +5,12 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from source.database.connection import get_session
-from source.database.operations import execute_draw, get_event, get_participant_by_access_token
+from source.database.operations import (
+    execute_draw_if_due,
+    get_event,
+    get_participant_by_access_token,
+    is_draw_due,
+)
 from source.settings import CurrencySelection
 
 router = APIRouter(prefix="/participant", tags=["Participant"])
@@ -43,9 +48,8 @@ async def get(access_token: str, session: AsyncSession = Depends(get_session)) -
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found for participant.")
 
     # Auto-trigger draw if deadline has passed and draw not yet complete
-    now = datetime.datetime.now(datetime.UTC)
-    if not event.is_draw_complete and now > event.registration_deadline and len(event.participants) >= 2:
-        await execute_draw(session, event)
+    if is_draw_due(event, participant_count=len(event.participants)):
+        await execute_draw_if_due(session, event_id=event.id)
 
         # Expire all cached objects to force fresh load from database
         session.expire_all()

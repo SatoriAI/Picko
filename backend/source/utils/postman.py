@@ -42,7 +42,6 @@ class ParticipantProtocol(Protocol):
     email: str | None
     name: str | None
     language: LanguageSelection
-    event: Any
     given_assignments: Sequence[AssignmentProtocol]
 
 
@@ -54,12 +53,11 @@ class PostMan:
     ) -> None:
         self._sender = settings.email_from
         self._api_key = settings.resend_api_key
-        self._frontend_origin = settings.cors_origins
+        self._frontend_url = settings.frontend_url.rstrip("/")
         self._app_name = settings.app_name
         self._max_retries = int(getattr(settings, "resend_max_retries", 6))
         self._backoff_base_seconds = float(getattr(settings, "resend_backoff_base_seconds", 0.5))
         self._max_retry_sleep_seconds = float(getattr(settings, "resend_max_retry_sleep_seconds", 20.0))
-        self._min_interval_seconds = float(getattr(settings, "resend_min_interval_seconds", 0.0))
 
         self._timeout = timeout
         self._client = client
@@ -239,64 +237,31 @@ class PostMan:
         # Should be unreachable, but keep a safe fallback.
         raise PostManSendError(f"Failed to send email after retries: {last_exc}")
 
-    async def send_event_emails(
-        self, *, participants: Sequence[ParticipantProtocol], event_id: int
-    ) -> tuple[list[str], int]:
-        sent_to: list[str] = []
-        skipped = 0
+    async def send_assignment_email(self, participant: ParticipantProtocol, *, event_id: int) -> SendResult:
+        """Email one participant the link that reveals who they are gifting. Raises PostManSendError on failure."""
+        if not participant.email:
+            raise ValueError("Participant has no email address.")
+        if not participant.given_assignments:
+            raise ValueError("Participant has no assignment.")
 
-        for participant in participants:
-            if not participant.email:
-                skipped += 1
-                continue
+        join_url = f"{self._frontend_url}/join/{participant.given_assignments[0].reveal_token}"
+        language = participant.language
 
-            assignments = participant.given_assignments
-            if not assignments or not participant.event:
-                skipped += 1
-                continue
-
-            token = assignments[0].reveal_token
-            join_url = f"{self._frontend_origin}/join/{token}"
-
-            lang = participant.language
-            subject = self._get_christmas_subject(lang)
-
-            html_body = self._render_christmas_email_html(language=lang, join_url=join_url, app_name=self._app_name)
-            text_body = self._render_christmas_email_text(language=lang, join_url=join_url, app_name=self._app_name)
-
-            try:
-                result = await self.send(
-                    to=participant.email,
-                    subject=subject,
-                    html=html_body,
-                    text=text_body,
-                    tags={"event_id": str(event_id)},
-                )
-            except PostManSendError as exc:
-                logger.exception(
-                    "Failed to send email",
-                    to=participant.email,
-                    participant_name=participant.name,
-                    event_id=event_id,
-                    error=str(exc),
-                )
-                skipped += 1
-                continue
-
-            logger.info(
-                "Email sent",
-                to=participant.email,
-                participant_name=participant.name,
-                event_id=event_id,
-                resend_id=result.id,
-            )
-            sent_to.append(participant.name or "")
-
-            # Smooth bursts to reduce chance of hitting provider rate limits.
-            if self._min_interval_seconds > 0:
-                await asyncio.sleep(self._min_interval_seconds)
-
-        return sent_to, skipped
+        result = await self.send(
+            to=participant.email,
+            subject=self._get_christmas_subject(language),
+            html=self._render_christmas_email_html(language=language, join_url=join_url, app_name=self._app_name),
+            text=self._render_christmas_email_text(language=language, join_url=join_url, app_name=self._app_name),
+            tags={"event_id": str(event_id)},
+        )
+        logger.info(
+            "Email sent",
+            to=participant.email,
+            participant_name=participant.name,
+            event_id=event_id,
+            resend_id=result.id,
+        )
+        return result
 
     async def close(self) -> None:
         if self._client and self._owns_client:

@@ -28,7 +28,16 @@ picko = "source.cli:cli"
 dev = [
     "pre-commit>=4.5.0",
     "pytest>=9.0.2",
+    "pytest-asyncio>=1.4.1.post1",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+# One loop for the whole session: the module-level engine pools connections bound to the loop that opened them.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 
 [tool.ruff]
 line-length = 120

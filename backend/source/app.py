@@ -10,7 +10,7 @@ from source.settings import settings
 
 def create_app() -> FastAPI:
     application = FastAPI(
-        name="Picko",
+        title=settings.app_name,
         description="Lightweight Secret Santa app for randomized draws and link-based result sharing.",
         docs_url=None,
         redoc_url="/docs",
