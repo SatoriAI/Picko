@@ -1,7 +1,9 @@
 import asyncio
 import datetime
+import shlex
 
 import click
+from pydantic import EmailStr, TypeAdapter, ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
@@ -13,6 +15,8 @@ from source.settings import settings
 from source.tasks.draw import draw
 from source.utils.datetime import ensure_utc
 from source.utils.postman import PostMan
+
+_EMAIL = TypeAdapter(EmailStr)
 
 
 def _parse_deadline(value: str) -> datetime.datetime:
@@ -26,10 +30,26 @@ def _parse_deadline(value: str) -> datetime.datetime:
     return ensure_utc(dt)
 
 
-async def _get_event_or_fail(session, event_id: int) -> Event:
-    if (event := await get_event(session, event_id=event_id)) is None:
+async def _get_event_or_fail(session, event_id: int, lock: bool = False) -> Event:
+    if (event := await get_event(session, event_id=event_id, lock=lock)) is None:
         raise click.ClickException(f"Event {event_id} not found")
     return event
+
+
+def _parse_email(value: str) -> str:
+    try:
+        return _EMAIL.validate_python(value.strip())
+    except ValidationError as exc:
+        raise click.ClickException(f"Invalid email address: {value}") from exc
+
+
+async def _get_participant_or_fail(session, event_id: int, name: str) -> Participant:
+    result = await session.execute(
+        select(Participant).where(Participant.event_id == event_id, Participant.name == name)
+    )
+    if (participant := result.scalar_one_or_none()) is None:
+        raise click.ClickException(f"Participant '{name}' not found in event {event_id}")
+    return participant
 
 
 def _schedule_draw_task(event_id: int, deadline: datetime.datetime) -> None:
@@ -107,6 +127,59 @@ def resend_email(event_id: int, name: str) -> None:
                 click.echo(f"Email sent successfully to {participant.email}.")
             else:
                 raise click.ClickException(f"Failed to send email to {participant.email}")
+
+    asyncio.run(_run())
+
+
+@cli.command("set-email")
+@click.argument("event_id", type=int)
+@click.argument("name", type=str)
+@click.argument("email", type=str)
+def set_email(event_id: int, name: str, email: str) -> None:
+    new_email = _parse_email(email)
+
+    async def _run() -> None:
+        async with AsyncSessionLocal() as session:
+            # Wait for a draw task that is sending emails, so its outcome (notified_at) is known before deciding
+            # whether this participant still needs a manual resend.
+            event = await _get_event_or_fail(session, event_id, lock=True)
+            participant = await _get_participant_or_fail(session, event_id, name)
+            old_email = participant.email
+            participant.email = new_email
+            await session.commit()
+
+        click.echo(f"Email of '{name}' in event {event_id} changed: {old_email or '<none>'} -> {new_email}.")
+        if event.notified_at is not None:
+            command = shlex.join(
+                ["uv", "run", "--no-sync", "python", "-m", "source.cli", "resend-email", str(event_id), name]
+            )
+            click.echo(f"Event emails were already sent. Send the assignment with: {command}")
+        elif event.is_draw_complete:
+            click.echo("The draw is complete; the scheduled draw task will email the assignment.")
+
+    asyncio.run(_run())
+
+
+@cli.command("delete-participant")
+@click.argument("event_id", type=int)
+@click.argument("name", type=str)
+def delete_participant(event_id: int, name: str) -> None:
+    async def _run() -> None:
+        async with AsyncSessionLocal() as session:
+            # Serialises with the draw task, which locks the same row. The HTTP-triggered draws do not lock, but they
+            # cannot leave a partial draw either: their Draw/Assignment inserts conflict with this lock or fail the FK.
+            event = await _get_event_or_fail(session, event_id, lock=True)
+            if event.is_draw_complete:
+                raise click.ClickException(
+                    f"The draw for event {event_id} is complete. Deleting '{name}' would cascade to the assignments "
+                    "where they give or receive, leaving their giver without a receiver."
+                )
+
+            participant = await _get_participant_or_fail(session, event_id, name)
+            await session.delete(participant)
+            await session.commit()
+
+        click.echo(f"Participant '{name}' (id={participant.id}) deleted from event {event_id}.")
 
     asyncio.run(_run())
 
