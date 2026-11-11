@@ -14,7 +14,7 @@ from tests.support import (
     create_event_with_participants,
     fetch_all,
     register,
-    wait_until_a_query_waits_on_a_lock,
+    wait_until_a_query_waits_on_a_lock_held_by,
 )
 
 
@@ -61,8 +61,8 @@ async def test_registration_waits_for_a_draw_in_progress_and_is_then_rejected(cl
         await draw_in_progress.execute(text("SELECT id FROM event WHERE id = :id FOR UPDATE"), {"id": event["id"]})
 
         registration = asyncio.create_task(register(client, event["registration_token"], "Late"))
-        done, _ = await asyncio.wait({registration}, timeout=0.5)
-        assert not done, "registration finished while the draw held the event"
+        await wait_until_a_query_waits_on_a_lock_held_by(draw_in_progress)
+        assert not registration.done(), "registration finished while the draw held the event"
 
         await draw_in_progress.execute(
             text("UPDATE event SET is_draw_complete = true WHERE id = :id"), {"id": event["id"]}
@@ -83,7 +83,7 @@ async def test_a_request_waits_for_a_draw_in_progress_instead_of_starting_its_ow
         await other_draw.execute(text("SELECT id FROM event WHERE id = :id FOR UPDATE"), {"id": event["id"]})
 
         request = asyncio.create_task(client.get(f"/event/{event['id']}"))
-        await wait_until_a_query_waits_on_a_lock()
+        await wait_until_a_query_waits_on_a_lock_held_by(other_draw)
 
         draw_id = (
             await other_draw.execute(text("INSERT INTO draw (event_id) VALUES (:id) RETURNING id"), {"id": event["id"]})

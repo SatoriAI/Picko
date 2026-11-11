@@ -8,7 +8,11 @@ import pytest
 from sqlalchemy import text
 
 from source.database.connection import ENGINE, AsyncSessionLocal
-from source.database.operations import mark_event_notified_if_nobody_is_waiting
+from source.database.operations import (
+    claim_unnotified_participant,
+    get_event,
+    mark_event_notified_if_nobody_is_waiting,
+)
 from source.settings import LanguageSelection
 from source.tasks.draw import UNFINISHED, draw_and_notify
 from source.utils.postman import PostMan, PostManSendError
@@ -18,7 +22,7 @@ from tests.support import (
     fetch_all,
     register,
     run_the_draw,
-    wait_until_a_query_waits_on_a_lock,
+    wait_until_a_query_waits_on_a_lock_held_by,
 )
 
 # `source.tasks` re-exports the task under the module's own name, so the module is only reachable this way.
@@ -164,6 +168,57 @@ async def test_an_unexpected_error_for_one_participant_does_not_cost_the_others_
     assert (await fetch_all("SELECT notified_at FROM event"))[0].notified_at is None
 
 
+async def test_an_email_that_cannot_be_recorded_does_not_cost_the_others_theirs(client, resend, monkeypatch):
+    event = await create_event_with_participants(client, ["Ann", "Bob", "Cid"])
+    await close_registration(event["id"])
+
+    claim = DRAW_TASK_MODULE.claim_unnotified_participant
+    connection_holding_bob: int | None = None
+
+    async def note_the_connection_that_claims_bob(session, *, participant_id):
+        nonlocal connection_holding_bob
+        participant = await claim(session, participant_id=participant_id)
+        if participant.name == "Bob":
+            connection_holding_bob = (await session.execute(text("SELECT pg_backend_pid()"))).scalar_one()
+        return participant
+
+    async def lose_the_connection_while_sending_to_bob(request: httpx.Request) -> httpx.Response:
+        if b"bob@example.com" in request.content:
+            # Waits for the backend to be gone, so the commit that records Bob's email is certain to find it dead.
+            terminated = await fetch_all("SELECT pg_terminate_backend(:pid, 5000) AS done", pid=connection_holding_bob)
+            assert terminated[0].done
+        return resend.handle(request)
+
+    monkeypatch.setattr(DRAW_TASK_MODULE, "claim_unnotified_participant", note_the_connection_that_claims_bob)
+    resend.handler = lose_the_connection_while_sending_to_bob
+    result = await draw_and_notify(event["id"])
+
+    assert (result["sent"], result["failed"]) == (2, 1)
+    # Bob's email left, but nothing says so: he counts as failed and the retry emails him again.
+    assert sorted(resend.recipients) == ["ann@example.com", "bob@example.com", "cid@example.com"]
+    notified = await fetch_all("SELECT name FROM participant WHERE notified_at IS NOT NULL ORDER BY name")
+    assert [row.name for row in notified] == ["Ann", "Cid"]
+    assert (await fetch_all("SELECT notified_at FROM event"))[0].notified_at is None
+
+
+async def test_claiming_a_participant_the_session_already_read_returns_their_current_address(client):
+    event = await create_event_with_participants(client, ["Ann", "Bob"])
+    await run_the_draw(client, event["id"])
+
+    async with AsyncSessionLocal() as task_session:
+        # Reading the event brings every participant into the session, Ann with the address she has now.
+        event_as_read = await get_event(task_session, event_id=event["id"])
+        ann = next(participant for participant in event_as_read.participants if participant.name == "Ann")
+
+        async with ENGINE.begin() as set_email:
+            await set_email.execute(text("UPDATE participant SET email = 'ann.new@example.com' WHERE name = 'Ann'"))
+
+        claimed = await claim_unnotified_participant(task_session, participant_id=ann.id)
+
+        # The claim is what the email is addressed from, so it has to be the row under the lock, not the earlier read.
+        assert claimed.email == "ann.new@example.com"
+
+
 async def test_a_participant_locked_by_someone_else_is_skipped_and_emailed_on_the_retry(client, resend):
     event = await create_event_with_participants(client, ["Ann", "Bob", "Cid"])
     await run_the_draw(client, event["id"])
@@ -227,7 +282,7 @@ async def test_closing_the_event_waits_for_set_email_and_then_sees_the_new_addre
         await set_email.execute(text("SELECT id FROM event WHERE id = :id FOR UPDATE"), {"id": event["id"]})
 
         closing = asyncio.create_task(mark_event_notified_if_nobody_is_waiting(task_session, event_id=event["id"]))
-        await wait_until_a_query_waits_on_a_lock()
+        await wait_until_a_query_waits_on_a_lock_held_by(set_email)
 
         await set_email.execute(text("UPDATE participant SET email = 'late@example.com' WHERE name = 'Late'"))
         await set_email.commit()

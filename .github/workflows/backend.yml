@@ -1,0 +1,60 @@
+# The backend's checks, on a machine that is not the author's: lint, format and the test suite.
+#
+# One job. The suite takes seconds, so a second job would spend more on checkout and install than it saved by
+# keeping Postgres away from the lint steps.
+name: Backend
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  # A new push supersedes the run in flight for the same ref.
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: lint and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: picko
+          POSTGRES_PASSWORD: picko
+          POSTGRES_DB: picko_test
+        ports: ['5432:5432']
+        # Without this the suite can start before Postgres accepts connections.
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # The suite drops and recreates every table. This database exists only for the length of the job.
+      TEST_DATABASE_URL: postgresql://picko:picko@localhost:5432/picko_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - name: Install
+        run: uv sync --frozen
+      - name: Lint
+        run: uv run --frozen ruff check
+      - name: Format
+        run: uv run --frozen ruff format --check
+      - name: Tests
+        run: uv run --frozen pytest

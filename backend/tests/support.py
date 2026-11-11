@@ -3,6 +3,7 @@ import datetime
 
 import httpx
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncConnection
 
 from source.database.connection import ENGINE
 
@@ -44,18 +45,23 @@ async def fetch_all(sql: str, **params) -> list:
         return list((await connection.execute(text(sql), params)).all())
 
 
-async def wait_until_a_query_waits_on_a_lock(timeout: float = 15.0) -> None:
-    """Positive evidence that something is blocked on a row lock, instead of sleeping and hoping it had time."""
+async def wait_until_a_query_waits_on_a_lock_held_by(holder: AsyncConnection, timeout: float = 15.0) -> None:
+    """
+    Positive evidence that a query is blocked behind this connection's lock, instead of sleeping and hoping.
+
+    Asking for the holder by pid keeps a lock wait anywhere else in the database from being taken for this one.
+    """
+    holder_pid = (await holder.execute(text("SELECT pg_backend_pid()"))).scalar_one()
     deadline = asyncio.get_running_loop().time() + timeout
     while asyncio.get_running_loop().time() < deadline:
-        waiting = await fetch_all(
-            "SELECT count(*) AS total FROM pg_stat_activity "
-            "WHERE wait_event_type = 'Lock' AND datname = current_database()"
+        blocked = await fetch_all(
+            "SELECT count(*) AS total FROM pg_stat_activity WHERE :holder = ANY(pg_blocking_pids(pid))",
+            holder=holder_pid,
         )
-        if waiting[0].total:
+        if blocked[0].total:
             return
         await asyncio.sleep(0.05)
-    raise AssertionError("no query was blocked on a lock")
+    raise AssertionError("no query was blocked behind the lock holder")
 
 
 async def run_the_draw(client: httpx.AsyncClient, event_id: int) -> None:
