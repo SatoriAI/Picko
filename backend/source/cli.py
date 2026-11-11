@@ -43,10 +43,13 @@ def _parse_email(value: str) -> str:
         raise click.ClickException(f"Invalid email address: {value}") from exc
 
 
-async def _get_participant_or_fail(session, event_id: int, name: str) -> Participant:
-    result = await session.execute(
-        select(Participant).where(Participant.event_id == event_id, Participant.name == name)
-    )
+async def _get_participant_or_fail(session, event_id: int, name: str, lock: bool = False) -> Participant:
+    query = select(Participant).where(Participant.event_id == event_id, Participant.name == name)
+    if lock:
+        # The event query already loaded this participant; without populate_existing the values read under the
+        # lock would be discarded in favour of the ones read before waiting for it.
+        query = query.with_for_update().execution_options(populate_existing=True)
+    result = await session.execute(query)
     if (participant := result.scalar_one_or_none()) is None:
         raise click.ClickException(f"Participant '{name}' not found in event {event_id}")
     return participant
@@ -143,19 +146,24 @@ def set_email(event_id: int, name: str, email: str) -> None:
             # The draw task takes this lock for its last step, deciding whether anyone still waits for an email. So
             # it either sees the new address and emails it, or has closed the event already and that shows here.
             event = await _get_event_or_fail(session, event_id, lock=True)
-            participant = await _get_participant_or_fail(session, event_id, name)
+            # The task holds this row while it emails the participant. Waiting for it here means notified_at
+            # below says whether the old address was already used.
+            participant = await _get_participant_or_fail(session, event_id, name, lock=True)
             old_email = participant.email
             participant.email = new_email
             await session.commit()
 
         click.echo(f"Email of '{name}' in event {event_id} changed: {old_email or '<none>'} -> {new_email}.")
+        resend = shlex.join(
+            ["uv", "run", "--no-sync", "python", "-m", "source.cli", "resend-email", str(event_id), name]
+        )
         if event.notified_at is not None or participant.notified_at is not None:
-            command = shlex.join(
-                ["uv", "run", "--no-sync", "python", "-m", "source.cli", "resend-email", str(event_id), name]
-            )
-            click.echo(f"Event emails were already sent. Send the assignment with: {command}")
+            click.echo(f"Emails already went out. Send the assignment to the new address with: {resend}")
         elif event.is_draw_complete:
-            click.echo("The draw is complete; the scheduled draw task will email the assignment.")
+            click.echo(
+                "The draw is complete and its emails are not finished. The draw task emails this address if it is "
+                f"still running or has a retry left. If it has stopped, send the assignment with: {resend}"
+            )
 
     asyncio.run(_run())
 

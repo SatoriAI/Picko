@@ -46,3 +46,19 @@ def test_the_draw_task_retries_while_emails_fail_and_then_gives_up(monkeypatch):
     assert result.failed()
     assert isinstance(result.result, MaxRetriesExceededError)
     assert runs == [7] * (draw.max_retries + 1)
+
+
+def test_the_draw_task_retries_after_an_unexpected_error(monkeypatch):
+    runs: list[int] = []
+
+    async def database_is_gone(event_id: int) -> dict:
+        runs.append(event_id)
+        raise RuntimeError("connection lost")
+
+    monkeypatch.setattr(sys.modules["source.tasks.draw"], "_run", database_is_gone)
+
+    result = draw.apply(args=[7])
+
+    assert result.failed()
+    assert isinstance(result.result, RuntimeError)
+    assert runs == [7] * (draw.max_retries + 1)

@@ -52,8 +52,8 @@ async def get(access_token: str, session: AsyncSession = Depends(get_session)) -
     if draw_was_due:
         await execute_draw_if_due(session, event_id=event.id)
 
-    # The participant was read before the event. A draw that committed between the two reads, or just now, is
-    # missing from that first read, and would be reported as "draw complete, no assignment".
+    # Reading the participant takes several statements, each seeing what was committed when it ran. A draw that
+    # commits in between leaves the event marked complete beside an assignment list fetched before it existed.
     if draw_was_due or (event.is_draw_complete and not participant.given_assignments):
         # Expire all cached objects to force fresh load from database
         session.expire_all()

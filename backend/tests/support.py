@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 
 import httpx
@@ -41,3 +42,23 @@ async def close_registration(event_id: int) -> None:
 async def fetch_all(sql: str, **params) -> list:
     async with ENGINE.begin() as connection:
         return list((await connection.execute(text(sql), params)).all())
+
+
+async def wait_until_a_query_waits_on_a_lock(timeout: float = 15.0) -> None:
+    """Positive evidence that something is blocked on a row lock, instead of sleeping and hoping it had time."""
+    deadline = asyncio.get_running_loop().time() + timeout
+    while asyncio.get_running_loop().time() < deadline:
+        waiting = await fetch_all(
+            "SELECT count(*) AS total FROM pg_stat_activity "
+            "WHERE wait_event_type = 'Lock' AND datname = current_database()"
+        )
+        if waiting[0].total:
+            return
+        await asyncio.sleep(0.05)
+    raise AssertionError("no query was blocked on a lock")
+
+
+async def run_the_draw(client: httpx.AsyncClient, event_id: int) -> None:
+    await close_registration(event_id)
+    response = await client.get(f"/event/{event_id}")
+    assert response.json()["is_draw_complete"] is True

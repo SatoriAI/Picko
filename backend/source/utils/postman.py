@@ -208,6 +208,8 @@ class PostMan:
                 data = resp.json()
             except ValueError:
                 data = {"raw_text": resp.text}
+            if not isinstance(data, dict):
+                data = {"raw_body": data}
 
             if resp.status_code >= status.HTTP_400_BAD_REQUEST:
                 # Sanitize response to avoid leaking sensitive info
