@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import shlex
 
 import click
 from pydantic import EmailStr, TypeAdapter, ValidationError
@@ -139,15 +140,22 @@ def set_email(event_id: int, name: str, email: str) -> None:
 
     async def _run() -> None:
         async with AsyncSessionLocal() as session:
-            event = await _get_event_or_fail(session, event_id)
+            # Wait for a draw task that is sending emails, so its outcome (notified_at) is known before deciding
+            # whether this participant still needs a manual resend.
+            event = await _get_event_or_fail(session, event_id, lock=True)
             participant = await _get_participant_or_fail(session, event_id, name)
             old_email = participant.email
             participant.email = new_email
             await session.commit()
 
         click.echo(f"Email of '{name}' in event {event_id} changed: {old_email or '<none>'} -> {new_email}.")
-        if event.is_draw_complete:
-            click.echo(f'The draw is complete. Send the assignment with: picko resend-email {event_id} "{name}"')
+        if event.notified_at is not None:
+            command = shlex.join(
+                ["uv", "run", "--no-sync", "python", "-m", "source.cli", "resend-email", str(event_id), name]
+            )
+            click.echo(f"Event emails were already sent. Send the assignment with: {command}")
+        elif event.is_draw_complete:
+            click.echo("The draw is complete; the scheduled draw task will email the assignment.")
 
     asyncio.run(_run())
 
@@ -158,7 +166,8 @@ def set_email(event_id: int, name: str, email: str) -> None:
 def delete_participant(event_id: int, name: str) -> None:
     async def _run() -> None:
         async with AsyncSessionLocal() as session:
-            # Lock the event row so a draw cannot start between this check and the delete.
+            # Serialises with the draw task, which locks the same row. The HTTP-triggered draws do not lock, but they
+            # cannot leave a partial draw either: their Draw/Assignment inserts conflict with this lock or fail the FK.
             event = await _get_event_or_fail(session, event_id, lock=True)
             if event.is_draw_complete:
                 raise click.ClickException(
