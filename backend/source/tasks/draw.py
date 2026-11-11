@@ -22,6 +22,10 @@ logger = get_logger()
 MAX_RETRIES = 5
 RETRY_BASE_SECONDS = 60
 
+# Outcomes that leave someone unemailed. "Elsewhere" is usually another run of this task, which finishes the job, but
+# it can also be `set-email` holding the row for a moment, and then nobody else would come back for that participant.
+UNFINISHED = frozenset({"emails_failed", "emails_in_progress_elsewhere"})
+
 
 async def _email_unnotified_participants(session: AsyncSession, *, event_id: int) -> tuple[int, int, int]:
     """
@@ -85,7 +89,7 @@ async def draw_and_notify(event_id: int) -> dict[str, Any]:
             if notified := await mark_event_notified_if_nobody_is_waiting(session, event_id=event_id):
                 break
             if claimed_elsewhere and sent_now == 0:
-                # Whoever is left is claimed by another run of this task, which closes the event when it is done.
+                # Whoever is left is locked by someone else right now. The task comes back for them on a retry.
                 break
             # Otherwise someone gained an address after this pass listed who to email: go round again.
 
@@ -123,8 +127,8 @@ def draw(self, event_id: int) -> dict[str, Any]:
         # A lost database or anything unforeseen. What was delivered is already recorded, so a rerun is safe.
         raise self.retry(exc=exc, countdown=countdown) from exc
 
-    if result.get("failed"):
-        # Only the participants still missing an email are tried again.
+    if result["status"] in UNFINISHED:
+        # Only the participants still missing an email are tried again; a retry that finds the event closed is a no-op.
         raise self.retry(countdown=countdown)
 
     return result

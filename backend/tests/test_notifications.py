@@ -10,7 +10,7 @@ from sqlalchemy import text
 from source.database.connection import ENGINE, AsyncSessionLocal
 from source.database.operations import mark_event_notified_if_nobody_is_waiting
 from source.settings import LanguageSelection
-from source.tasks.draw import draw_and_notify
+from source.tasks.draw import UNFINISHED, draw_and_notify
 from source.utils.postman import PostMan, PostManSendError
 from tests.support import (
     close_registration,
@@ -164,19 +164,31 @@ async def test_an_unexpected_error_for_one_participant_does_not_cost_the_others_
     assert (await fetch_all("SELECT notified_at FROM event"))[0].notified_at is None
 
 
-async def test_a_participant_claimed_by_another_run_is_left_to_that_run(client, resend):
+async def test_a_participant_locked_by_someone_else_is_skipped_and_emailed_on_the_retry(client, resend):
     event = await create_event_with_participants(client, ["Ann", "Bob", "Cid"])
     await run_the_draw(client, event["id"])
 
-    async with ENGINE.connect() as other_run:
-        await other_run.execute(text("SELECT id FROM participant WHERE name = 'Bob' FOR UPDATE"))
+    async with ENGINE.connect() as someone_else:
+        # Another run of the task mid-send, or `set-email` changing Bob's address: either holds his row.
+        await someone_else.execute(text("SELECT id FROM participant WHERE name = 'Bob' FOR UPDATE"))
 
-        # Without SKIP LOCKED this run would queue behind the other one's send instead of moving on.
+        # Without SKIP LOCKED this run would queue behind that lock instead of moving on.
         result = await asyncio.wait_for(draw_and_notify(event["id"]), timeout=10)
 
-    assert result["status"] == "emails_in_progress_elsewhere"
+        await someone_else.execute(text("UPDATE participant SET email = 'bob.new@example.com' WHERE name = 'Bob'"))
+        await someone_else.commit()
+
+    # An unfinished outcome: the task retries on it, because the lock holder may not be a run that emails Bob.
+    assert result["status"] in UNFINISHED
     assert sorted(resend.recipients) == ["ann@example.com", "cid@example.com"]
     assert (await fetch_all("SELECT notified_at FROM event"))[0].notified_at is None
+
+    resend.delivered.clear()
+    retry = await draw_and_notify(event["id"])
+
+    assert retry["status"] == "emails_sent"
+    assert resend.recipients == ["bob.new@example.com"]
+    assert (await fetch_all("SELECT notified_at FROM event"))[0].notified_at is not None
 
 
 async def test_an_address_that_arrives_after_an_empty_pass_is_still_emailed(client, resend, monkeypatch):
