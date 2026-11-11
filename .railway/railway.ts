@@ -48,7 +48,15 @@ export default defineRailway(() => {
       serviceDomains: { 'picko-production.up.railway.app': { port: 8000 } },
       privateNetworkEndpoint: 'http-server',
     },
-    env: onRailway('CORS_ORIGINS', 'DATABASE_URL', 'EMAIL_FROM', 'PORT', 'REDIS_URL', 'RESEND_API_KEY'),
+    env: onRailway(
+      'CORS_ORIGINS',
+      'DATABASE_URL',
+      'EMAIL_FROM',
+      'FRONTEND_URL',
+      'PORT',
+      'REDIS_URL',
+      'RESEND_API_KEY',
+    ),
   })
 
   // Never sleeps: it consumes the Redis queue, and a sleeping consumer takes no work.
@@ -64,6 +72,7 @@ export default defineRailway(() => {
       'DATABASE_URL',
       'DEFAULT_WORKER_CONCURRENCY',
       'EMAIL_FROM',
+      'FRONTEND_URL',
       'REDIS_URL',
       'RESEND_API_KEY',
     ),

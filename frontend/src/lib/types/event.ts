@@ -20,9 +20,7 @@ export interface ParticipantSummary {
  * Full participant data (used in admin/dashboard views).
  */
 export interface ParticipantData extends ParticipantSummary {
-	email?: string | null;
 	language: string;
-	shareToken?: string | null;
 }
 
 /**
@@ -73,10 +71,8 @@ export interface EventInfo {
 export interface BackendParticipant {
 	id: number;
 	name: string;
-	email: string | null;
 	language: string;
 	wishlist: string | null;
-	reveal_token: string | null;
 }
 
 export interface BackendEvent {
@@ -119,10 +115,8 @@ export function transformParticipant(backend: BackendParticipant): ParticipantDa
 	return {
 		id: backend.id,
 		name: backend.name,
-		email: backend.email,
 		language: backend.language,
-		wishlist: backend.wishlist,
-		shareToken: backend.reveal_token
+		wishlist: backend.wishlist
 	};
 }
 

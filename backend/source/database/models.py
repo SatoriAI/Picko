@@ -64,6 +64,9 @@ class Participant(Base):
     # Personal access token - allows participant to view their own assignment
     access_token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
 
+    # Set once the assignment email was accepted by the provider, so a rerun never emails the same person twice.
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     # SQL Alchemy Relations
     event: Mapped["Event"] = relationship(back_populates="participants")
     given_assignments: Mapped[list["Assignment"]] = relationship(
@@ -80,10 +83,11 @@ class Participant(Base):
 
 class Draw(Base):
     __tablename__ = "draw"
+    __table_args__ = (UniqueConstraint("event_id", name="uq_draw_event_id"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    event_id: Mapped[int] = mapped_column(ForeignKey("event.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("event.id", ondelete="CASCADE"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

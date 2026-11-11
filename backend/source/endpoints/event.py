@@ -1,7 +1,8 @@
 import datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, EmailStr, Field, StringConstraints, field_validator
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from structlog import get_logger
@@ -22,23 +23,33 @@ logger = get_logger()
 router = APIRouter(prefix="/event", tags=["Event"])
 
 
+# Stripped before the length check, so a name made of spaces is rejected rather than stored empty.
+Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)]
+
+
 class EventCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=255)
+    name: Name
     max_amount: int | None = Field(default=None, gt=0)
     date: datetime.date | None = None
-    currency: CurrencySelection | None
-    registration_deadline: datetime.datetime
+    currency: CurrencySelection | None = None
+    registration_deadline: AwareDatetime
+
+    @field_validator("registration_deadline")
+    @classmethod
+    def deadline_must_be_in_the_future(cls, value: datetime.datetime) -> datetime.datetime:
+        if value <= datetime.datetime.now(datetime.UTC):
+            raise ValueError("Registration deadline must be in the future")
+        return value
 
 
 class ParticipantRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    # Public: anyone holding the event or registration link reads this. No email, no reveal token.
     id: int
     name: str
-    email: str | None
     language: LanguageSelection
     wishlist: str | None
-    reveal_token: str | None = None
 
 
 class EventRead(BaseModel):
@@ -56,7 +67,7 @@ class EventRead(BaseModel):
 
 
 class ParticipantRegister(BaseModel):
-    name: str = Field(min_length=1, max_length=255)
+    name: Name
     email: EmailStr | None = None
     language: LanguageSelection = LanguageSelection.EN
     wishlist: str | None = Field(default=None, max_length=1000)
@@ -75,21 +86,9 @@ class ParticipantRegistered(BaseModel):
 
 
 def build_event_response(event: Event) -> EventRead:
-    participants = []
-    for p in event.participants:
-        reveal_token = None
-        if p.given_assignments:
-            reveal_token = p.given_assignments[0].reveal_token
-        participants.append(
-            ParticipantRead(
-                id=p.id,
-                name=p.name,
-                email=p.email,
-                language=p.language,
-                wishlist=p.wishlist,
-                reveal_token=reveal_token,
-            )
-        )
+    participants = [
+        ParticipantRead(id=p.id, name=p.name, language=p.language, wishlist=p.wishlist) for p in event.participants
+    ]
     return EventRead(
         id=event.id,
         name=event.name,
@@ -122,15 +121,10 @@ async def create(payload: EventCreate, session: AsyncSession = Depends(get_sessi
 
     # Schedule draw execution after the registration deadline; use countdown (not ETA) to avoid timezone pitfalls.
     try:
-        deadline = event.registration_deadline
-        if deadline.tzinfo is None:
-            deadline = deadline.replace(tzinfo=datetime.UTC)
-        else:
-            deadline = deadline.astimezone(datetime.UTC)
+        until_deadline = event.registration_deadline - datetime.datetime.now(datetime.UTC)
         draw.apply_async(
             args=[event.id],
-            countdown=max(0, int((deadline - datetime.datetime.now(datetime.UTC)).total_seconds()))
-            + settings.schedule_buffer_seconds,
+            countdown=max(0, int(until_deadline.total_seconds())) + settings.schedule_buffer_seconds,
         )
     except Exception as exc:
         logger.exception("Failed to schedule draw task", event_id=event.id, error=str(exc))
@@ -149,19 +143,19 @@ async def get(event_id: int, session: AsyncSession = Depends(get_session)) -> Ev
 async def register_for_event(
     token: str, payload: ParticipantRegister, session: AsyncSession = Depends(get_session)
 ) -> ParticipantRegistered:
-    if (event := await get_event_by_registration_token(session, registration_token=token)) is None:
+    # Locked until the participant is committed: a draw either sees this participant or makes this request fail.
+    if (event := await get_event_by_registration_token(session, registration_token=token, lock=True)) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
 
-    # Check if registration deadline has passed
     now = datetime.datetime.now(datetime.UTC)
-    if now > event.registration_deadline:
+    if event.is_draw_complete or now > event.registration_deadline:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Registration deadline has passed")
 
     try:
         participant = await register_participant(
             session,
             event_id=event.id,
-            name=payload.name.strip(),
+            name=payload.name,
             email=str(payload.email).strip() if payload.email else None,
             language=payload.language,
             wishlist=payload.wishlist.strip() if payload.wishlist else None,

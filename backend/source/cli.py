@@ -14,7 +14,7 @@ from source.database.operations import get_event
 from source.settings import settings
 from source.tasks.draw import draw
 from source.utils.datetime import ensure_utc
-from source.utils.postman import PostMan
+from source.utils.postman import PostMan, PostManSendError
 
 _EMAIL = TypeAdapter(EmailStr)
 
@@ -43,10 +43,13 @@ def _parse_email(value: str) -> str:
         raise click.ClickException(f"Invalid email address: {value}") from exc
 
 
-async def _get_participant_or_fail(session, event_id: int, name: str) -> Participant:
-    result = await session.execute(
-        select(Participant).where(Participant.event_id == event_id, Participant.name == name)
-    )
+async def _get_participant_or_fail(session, event_id: int, name: str, lock: bool = False) -> Participant:
+    query = select(Participant).where(Participant.event_id == event_id, Participant.name == name)
+    if lock:
+        # The event query already loaded this participant; without populate_existing the values read under the
+        # lock would be discarded in favour of the ones read before waiting for it.
+        query = query.with_for_update().execution_options(populate_existing=True)
+    result = await session.execute(query)
     if (participant := result.scalar_one_or_none()) is None:
         raise click.ClickException(f"Participant '{name}' not found in event {event_id}")
     return participant
@@ -121,12 +124,12 @@ def resend_email(event_id: int, name: str) -> None:
                 raise click.ClickException(f"Participant '{name}' has no assignment (draw not complete?)")
 
             async with PostMan() as postman:
-                sent_to, skipped = await postman.send_event_emails(participants=[participant], event_id=event_id)
+                try:
+                    await postman.send_assignment_email(participant, event_id=event_id)
+                except PostManSendError as exc:
+                    raise click.ClickException(f"Failed to send email to {participant.email}: {exc}") from exc
 
-            if sent_to:
-                click.echo(f"Email sent successfully to {participant.email}.")
-            else:
-                raise click.ClickException(f"Failed to send email to {participant.email}")
+            click.echo(f"Email sent successfully to {participant.email}.")
 
     asyncio.run(_run())
 
@@ -140,22 +143,27 @@ def set_email(event_id: int, name: str, email: str) -> None:
 
     async def _run() -> None:
         async with AsyncSessionLocal() as session:
-            # Wait for a draw task that is sending emails, so its outcome (notified_at) is known before deciding
-            # whether this participant still needs a manual resend.
+            # The draw task takes this lock for its last step, deciding whether anyone still waits for an email. So
+            # it either sees the new address and emails it, or has closed the event already and that shows here.
             event = await _get_event_or_fail(session, event_id, lock=True)
-            participant = await _get_participant_or_fail(session, event_id, name)
+            # The task holds this row while it emails the participant. Waiting for it here means notified_at
+            # below says whether the old address was already used.
+            participant = await _get_participant_or_fail(session, event_id, name, lock=True)
             old_email = participant.email
             participant.email = new_email
             await session.commit()
 
         click.echo(f"Email of '{name}' in event {event_id} changed: {old_email or '<none>'} -> {new_email}.")
-        if event.notified_at is not None:
-            command = shlex.join(
-                ["uv", "run", "--no-sync", "python", "-m", "source.cli", "resend-email", str(event_id), name]
-            )
-            click.echo(f"Event emails were already sent. Send the assignment with: {command}")
+        resend = shlex.join(
+            ["uv", "run", "--no-sync", "python", "-m", "source.cli", "resend-email", str(event_id), name]
+        )
+        if event.notified_at is not None or participant.notified_at is not None:
+            click.echo(f"Emails already went out. Send the assignment to the new address with: {resend}")
         elif event.is_draw_complete:
-            click.echo("The draw is complete; the scheduled draw task will email the assignment.")
+            click.echo(
+                "The draw is complete and its emails are not finished. The draw task emails this address if it is "
+                f"still running or has a retry left. If it has stopped, send the assignment with: {resend}"
+            )
 
     asyncio.run(_run())
 
@@ -166,8 +174,7 @@ def set_email(event_id: int, name: str, email: str) -> None:
 def delete_participant(event_id: int, name: str) -> None:
     async def _run() -> None:
         async with AsyncSessionLocal() as session:
-            # Serialises with the draw task, which locks the same row. The HTTP-triggered draws do not lock, but they
-            # cannot leave a partial draw either: their Draw/Assignment inserts conflict with this lock or fail the FK.
+            # Serialises with the draw, which locks the same row wherever it is triggered from.
             event = await _get_event_or_fail(session, event_id, lock=True)
             if event.is_draw_complete:
                 raise click.ClickException(

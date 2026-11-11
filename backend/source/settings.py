@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     database_url: str
     redis_url: str
     cors_origins: str
+    frontend_url: str
 
     # Email service
     email_from: str
