@@ -48,9 +48,13 @@ async def get(access_token: str, session: AsyncSession = Depends(get_session)) -
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found for participant.")
 
     # Auto-trigger draw if deadline has passed and draw not yet complete
-    if is_draw_due(event, participant_count=len(event.participants)):
+    draw_was_due = is_draw_due(event, participant_count=len(event.participants))
+    if draw_was_due:
         await execute_draw_if_due(session, event_id=event.id)
 
+    # The participant was read before the event. A draw that committed between the two reads, or just now, is
+    # missing from that first read, and would be reported as "draw complete, no assignment".
+    if draw_was_due or (event.is_draw_complete and not participant.given_assignments):
         # Expire all cached objects to force fresh load from database
         session.expire_all()
 
