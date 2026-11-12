@@ -11,7 +11,7 @@ from tests.support import (
     create_event_with_participants,
     fetch_all,
     register,
-    wait_until_a_query_waits_on_a_lock,
+    wait_until_a_query_waits_on_a_lock_held_by,
 )
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -72,7 +72,7 @@ async def test_set_email_during_a_send_to_that_participant_offers_a_resend(clien
         await task_sending_to_ann.execute(text("SELECT id FROM participant WHERE name = 'Ann' FOR UPDATE"))
 
         command = await start_cli("set-email", str(event["id"]), "Ann", "ann.new@example.com")
-        await wait_until_a_query_waits_on_a_lock()
+        await wait_until_a_query_waits_on_a_lock_held_by(task_sending_to_ann)
 
         await task_sending_to_ann.execute(text("UPDATE participant SET notified_at = now() WHERE name = 'Ann'"))
         await task_sending_to_ann.commit()
@@ -95,7 +95,7 @@ async def test_set_email_waits_while_the_task_decides_whether_anyone_is_left(cli
         )
 
         command = await start_cli("set-email", str(event["id"]), "NoEmail", "found@example.com")
-        await wait_until_a_query_waits_on_a_lock()
+        await wait_until_a_query_waits_on_a_lock_held_by(task_closing_the_event)
         assert await email_of("NoEmail") is None
 
         await task_closing_the_event.commit()
