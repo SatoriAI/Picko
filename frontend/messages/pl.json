@@ -131,5 +131,18 @@
 	"error_not_found_title": "Nie znaleziono strony",
 	"error_not_found_desc": "Ten link nie działa. Może zawierać literówkę albo wydarzenie już nie istnieje.",
 	"error_generic_title": "Coś poszło nie tak",
-	"error_generic_desc": "Spróbuj ponownie za chwilę."
+	"error_generic_desc": "Spróbuj ponownie za chwilę.",
+	"faq_title": "Najczęściej zadawane pytania",
+	"faq_free_q": "Czy Picko jest darmowe?",
+	"faq_free_a": "Tak. Z Picko korzystasz za darmo, bez płatnej wersji i bez limitu uczestników.",
+	"faq_account_q": "Czy muszę zakładać konto?",
+	"faq_account_a": "Nie. Tworzysz wydarzenie i wysyłasz link rejestracyjny, a każdy zapisuje się, podając tylko imię. Każdy uczestnik dostaje prywatny link do swojej strony, więc nikt nie potrzebuje hasła. E-mail jest opcjonalny: jeśli go podasz, wyślemy Ci na niego wynik losowania.",
+	"faq_draw_q": "Jak działa losowanie mikołajkowe i kiedy się odbywa?",
+	"faq_draw_a": "Losowanie odbywa się automatycznie, gdy tylko minie termin zapisów. Picko losuje pary tak, żeby każdy kupował prezent dokładnie jednej osobie i nikt nie wylosował samego siebie. Potrzeba co najmniej 2 uczestników.",
+	"faq_budget_q": "Czy można ustalić limit kwoty na prezent?",
+	"faq_budget_a": "Tak. Przy tworzeniu wydarzenia możesz ustawić maksymalną cenę prezentu w PLN, USD lub EUR, a każdy zobaczy ją obok wylosowanej osoby. To umowa w Waszej grupie: Picko nie obsługuje żadnych płatności.",
+	"faq_results_q": "Kto widzi wyniki losowania?",
+	"faq_results_a": "Każdy uczestnik widzi na swojej prywatnej stronie tylko osobę, której kupuje prezent. Picko nikomu nie pokazuje pełnej listy par, nawet organizatorowi. Cała grupa widzi jedynie, kto się zapisał, i listy życzeń uczestników.",
+	"faq_late_q": "Co jeśli ktoś zapisze się po terminie?",
+	"faq_late_a": "Zapisy zamykają się wraz z upływem terminu, a losowanie odbywa się wśród osób, które zdążyły się zapisać. Nikogo nie da się dodać do losowania, które już się odbyło, więc wybierz termin, który da wszystkim czas. Jeśli ktoś się nie zmieści, utwórz nowe wydarzenie i wyślij jego link."
 }

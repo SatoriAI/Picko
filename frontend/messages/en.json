@@ -131,5 +131,18 @@
 	"error_not_found_title": "Page not found",
 	"error_not_found_desc": "This link doesn't work. It may be mistyped, or the event may no longer exist.",
 	"error_generic_title": "Something went wrong",
-	"error_generic_desc": "Please try again in a moment."
+	"error_generic_desc": "Please try again in a moment.",
+	"faq_title": "Frequently asked questions",
+	"faq_free_q": "Is Picko free?",
+	"faq_free_a": "Yes. Picko is free to use, with no paid plan and no limit on how many people join.",
+	"faq_account_q": "Do I need to create an account?",
+	"faq_account_a": "No. You create the event and share its registration link, and everyone signs up with just their name. Each person gets a private link to their own page, so nobody needs a password. An email address is optional: give one and Picko sends your result there.",
+	"faq_draw_q": "How does the draw work, and when does it happen?",
+	"faq_draw_a": "The draw runs by itself as soon as the registration deadline passes. Picko pairs everyone at random so that each person buys a gift for exactly one other person and nobody draws their own name. It needs at least 2 participants.",
+	"faq_budget_q": "Can I set a spending limit for gifts?",
+	"faq_budget_a": "Yes. When you create the event you can set a maximum gift price in PLN, USD or EUR, and everyone sees it next to the name they drew. It's an agreement within your group: Picko doesn't handle any money.",
+	"faq_results_q": "Who can see who drew whom?",
+	"faq_results_a": "Each participant sees only who they're buying for, on their own private page. Picko never shows anyone the full list of pairs, not even the organizer. What the group does share is the list of who has joined and everyone's wishlists.",
+	"faq_late_q": "What if someone registers late?",
+	"faq_late_a": "Registration closes at the deadline, and the draw goes ahead with whoever has signed up by then. Nobody can be added to a draw that has already happened, so pick a deadline that gives everyone time. If someone is left out, create a new event and share its link."
 }
