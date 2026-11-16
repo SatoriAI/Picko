@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
 	import { page } from '$app/state';
-	import { resolve } from '$app/paths';
+	import { localizeHref } from '$lib/paraglide/runtime';
 	import { PageLayout, Card, ActionLink } from '$lib/components';
 
 	const notFound = $derived(page.status === 404);
@@ -23,7 +23,8 @@
 			<p class="mb-6 text-slate-500 dark:text-slate-400">
 				{notFound ? m.error_not_found_desc() : m.error_generic_desc()}
 			</p>
-			<ActionLink href={resolve('/')} external={false}>{m.admin_back_home()}</ActionLink>
+			<!-- This language's homepage directly: following `/` client-side would skip the redirect and stay on `/`. -->
+			<ActionLink href={localizeHref('/')} external={false}>{m.admin_back_home()}</ActionLink>
 		</Card>
 	</section>
 </PageLayout>
