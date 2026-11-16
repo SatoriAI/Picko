@@ -1,5 +1,4 @@
 import type { Handle } from '@sveltejs/kit';
-import { sequence } from '@sveltejs/kit/hooks';
 import { paraglideMiddleware } from '$lib/paraglide/server';
 
 const handleParaglide: Handle = ({ event, resolve }) =>
@@ -12,16 +11,15 @@ const handleParaglide: Handle = ({ event, resolve }) =>
 	});
 
 // A secret link is the only access control, so a page reached by one must not be indexed, and its address must not
-// leave in the Referer header when someone follows an outbound link from it.
-export const handleTokenRoutes: Handle = async ({ event, resolve }) => {
-	const response = await resolve(event);
+// leave in the Referer header when someone follows an outbound link from it. This wraps Paraglide directly rather
+// than going through sequence(), which needs SvelteKit's request context and so cannot be called from a test.
+export const handle: Handle = async (input) => {
+	const response = await handleParaglide(input);
 
-	if (event.route.id?.includes('[token]')) {
+	if (input.event.route.id?.includes('[token]')) {
 		response.headers.set('X-Robots-Tag', 'noindex, nofollow');
 		response.headers.set('Referrer-Policy', 'no-referrer');
 	}
 
 	return response;
 };
-
-export const handle: Handle = sequence(handleTokenRoutes, handleParaglide);

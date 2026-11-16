@@ -1,28 +1,37 @@
 import { describe, expect, it } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
-import { handleTokenRoutes } from './hooks.server';
+import { handle } from './hooks.server';
 
-async function headersFor(routeId: string | null): Promise<Headers> {
-	const event = { route: { id: routeId } } as RequestEvent;
-	const response = await handleTokenRoutes({ event, resolve: async () => new Response('ok') });
+// Goes through the exported handle, so dropping the hook from the sequence fails these tests.
+async function headersFor(path: string, routeId: string | null): Promise<Headers> {
+	const event = {
+		request: new Request(`http://localhost${path}`),
+		url: new URL(`http://localhost${path}`),
+		route: { id: routeId }
+	} as RequestEvent;
+	const response = await handle({ event, resolve: async () => new Response('ok') });
 	return response.headers;
 }
 
-describe('handleTokenRoutes', () => {
+describe('handle', () => {
 	it.each([
-		'/event/[token]',
-		'/register/[token]',
-		'/my/[token]',
-		'/join/[token]',
-		'/api/event/[token]'
-	])('keeps %s out of search engines and Referer headers', async (routeId) => {
-		const headers = await headersFor(routeId);
+		['/event/abc', '/event/[token]'],
+		['/pl/event/abc', '/event/[token]'],
+		['/register/abc', '/register/[token]'],
+		['/my/abc', '/my/[token]'],
+		['/join/abc', '/join/[token]'],
+		['/api/event/abc', '/api/event/[token]']
+	])('keeps %s out of search engines and Referer headers', async (path, routeId) => {
+		const headers = await headersFor(path, routeId);
 		expect(headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
 		expect(headers.get('Referrer-Policy')).toBe('no-referrer');
 	});
 
-	it.each(['/', null])('leaves %s indexable', async (routeId) => {
-		const headers = await headersFor(routeId);
+	it.each([
+		['/', '/'],
+		['/nope', null]
+	])('leaves %s indexable', async (path, routeId) => {
+		const headers = await headersFor(path, routeId);
 		expect(headers.get('X-Robots-Tag')).toBeNull();
 		expect(headers.get('Referrer-Policy')).toBeNull();
 	});
