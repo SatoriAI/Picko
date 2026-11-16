@@ -40,7 +40,7 @@
 	<title>{m.admin_event_dashboard()}: {event.name}</title>
 </svelte:head>
 
-<PageLayout isHeaderLink>
+<PageLayout>
 	<!-- Page Title -->
 	<section class="py-6 sm:py-8">
 		<div class="mx-auto max-w-3xl">

@@ -12,7 +12,7 @@
 	<title>{m.join_page_title()}</title>
 </svelte:head>
 
-<PageLayout isHeaderLink>
+<PageLayout>
 	<div class="flex min-h-[70vh] flex-col items-center justify-center py-8">
 		<GiftBoxReveal
 			giverName={assignment.giver_name}
