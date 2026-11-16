@@ -15,8 +15,7 @@
 		FormLabel,
 		FormError,
 		Button,
-		Chip,
-		ActionLink
+		Chip
 	} from '$lib/components';
 	import type { RegistrationEventData } from '$lib/types';
 
@@ -131,11 +130,16 @@
 					<p class="text-slate-500 dark:text-slate-400">
 						{m.registration_closed_desc()}
 					</p>
-					<div class="mt-5">
-						<ActionLink href={resolve(`/event/${event.id}`)} external={false}>
+					<div class="mt-5 flex justify-center">
+						<a
+							href={resolve(`/event/${event.id}`)}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 px-6 py-3 font-medium text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl"
+						>
 							<span>👥</span>
-							{m.registration_closed_event_link()}
-						</ActionLink>
+							{m.my_view_event_button()}
+						</a>
 					</div>
 				</Card>
 			{:else}

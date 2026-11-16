@@ -80,7 +80,6 @@
 	"registration_failed": "Rejestracja nie powiodła się. Spróbuj ponownie.",
 	"registration_closed_title": "Rejestracja zamknięta",
 	"registration_closed_desc": "Termin minął. Rejestracja nie jest już dostępna.",
-	"registration_closed_event_link": "Zobacz wydarzenie i listy życzeń",
 	"label_name": "Twoje imię",
 	"placeholder_name": "np. Anna",
 	"label_email": "Adres email",

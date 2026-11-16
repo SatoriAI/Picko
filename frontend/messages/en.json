@@ -80,7 +80,6 @@
 	"registration_failed": "Registration failed. Please try again.",
 	"registration_closed_title": "Registration closed",
 	"registration_closed_desc": "The deadline has passed. Registration is no longer available.",
-	"registration_closed_event_link": "View event and wishlists",
 	"label_name": "Your name",
 	"placeholder_name": "e.g. Anna",
 	"label_email": "Email address",
