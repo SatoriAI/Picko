@@ -3,7 +3,8 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { getLocale, locales, localizeUrl } from '$lib/paraglide/runtime';
+	import { getLocale, locales } from '$lib/paraglide/runtime';
+	import { homeAlternates, localizedHome } from '$lib/seo';
 	import { fetchJson } from '$lib/api/client';
 	import {
 		PageLayout,
@@ -104,14 +105,13 @@
 	// Search engines get one URL per language for the homepage; `/` redirects visitors to theirs.
 	const OG_LOCALES = { en: 'en_US', pl: 'pl_PL' } as const;
 	const locale = getLocale();
-	const homeUrl = new URL('/', page.url.origin);
-	const localizedHome = (l: (typeof locales)[number]) => localizeUrl(homeUrl, { locale: l }).href;
+	const canonical = localizedHome(page.url.origin, locale);
 	const ogImage = new URL(`/og-${locale}.png`, page.url.origin).href;
 	const structuredData = JSON.stringify({
 		'@context': 'https://schema.org',
 		'@type': 'WebApplication',
 		name: m.app_name(),
-		url: localizedHome(locale),
+		url: canonical,
 		description: m.seo_description(),
 		inLanguage: locale,
 		applicationCategory: 'LifestyleApplication',
@@ -145,17 +145,16 @@
 <svelte:head>
 	<title>{m.seo_title()}</title>
 	<meta name="description" content={m.seo_description()} />
-	<link rel="canonical" href={localizedHome(locale)} />
-	{#each locales as alternate (alternate)}
-		<link rel="alternate" hreflang={alternate} href={localizedHome(alternate)} />
+	<link rel="canonical" href={canonical} />
+	{#each homeAlternates(page.url.origin) as { hreflang, href } (hreflang)}
+		<link rel="alternate" {hreflang} {href} />
 	{/each}
-	<link rel="alternate" hreflang="x-default" href={homeUrl.href} />
 
 	<meta property="og:type" content="website" />
 	<meta property="og:site_name" content={m.app_name()} />
 	<meta property="og:title" content={m.seo_title()} />
 	<meta property="og:description" content={m.seo_description()} />
-	<meta property="og:url" content={localizedHome(locale)} />
+	<meta property="og:url" content={canonical} />
 	<meta property="og:image" content={ogImage} />
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
