@@ -102,7 +102,7 @@
 	<title>{m.register_title()}: {event.name}</title>
 </svelte:head>
 
-<PageLayout isHeaderLink>
+<PageLayout>
 	<section class="py-6 sm:py-8">
 		<div class="mx-auto max-w-xl">
 			<!-- Event Info Header -->

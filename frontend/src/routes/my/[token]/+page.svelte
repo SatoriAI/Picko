@@ -47,7 +47,7 @@
 	<title>{m.my_status_title()}: {status.event.name}</title>
 </svelte:head>
 
-<PageLayout isHeaderLink>
+<PageLayout>
 	{#if isLoadingDraw}
 		<!-- Loading state when countdown reaches 0 -->
 		<div class="flex min-h-[70vh] flex-col items-center justify-center py-8">

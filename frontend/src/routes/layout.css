@@ -5,6 +5,12 @@
 /* Tailwind v4: enable class-based dark mode via `html.dark` */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Self-hosted from @fontsource-variable/outfit (imported in +layout.svelte): one variable file per subset covers
+   every weight we use, and no request leaves for Google. */
+@theme {
+	--font-sans: 'Outfit Variable', system-ui, sans-serif;
+}
+
 /* Chip component styles */
 .chip {
 	display: inline-flex;

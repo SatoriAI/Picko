@@ -13,7 +13,7 @@
 	<meta name="robots" content="noindex" />
 </svelte:head>
 
-<PageLayout isHeaderLink>
+<PageLayout>
 	<section class="py-12 sm:py-16">
 		<Card class="mx-auto max-w-md text-center">
 			<p class="mb-2 text-5xl font-bold text-rose-500">{page.status}</p>

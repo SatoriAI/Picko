@@ -3,7 +3,8 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { getLocale, locales, localizeUrl } from '$lib/paraglide/runtime';
+	import { getLocale, locales } from '$lib/paraglide/runtime';
+	import { homeAlternates, localizedHome } from '$lib/seo';
 	import { fetchJson } from '$lib/api/client';
 	import {
 		PageLayout,
@@ -104,14 +105,13 @@
 	// Search engines get one URL per language for the homepage; `/` redirects visitors to theirs.
 	const OG_LOCALES = { en: 'en_US', pl: 'pl_PL' } as const;
 	const locale = getLocale();
-	const homeUrl = new URL('/', page.url.origin);
-	const localizedHome = (l: (typeof locales)[number]) => localizeUrl(homeUrl, { locale: l }).href;
+	const canonical = localizedHome(page.url.origin, locale);
 	const ogImage = new URL(`/og-${locale}.png`, page.url.origin).href;
 	const structuredData = JSON.stringify({
 		'@context': 'https://schema.org',
 		'@type': 'WebApplication',
 		name: m.app_name(),
-		url: localizedHome(locale),
+		url: canonical,
 		description: m.seo_description(),
 		inLanguage: locale,
 		applicationCategory: 'LifestyleApplication',
@@ -134,6 +134,16 @@
 		{ step: 3, title: () => m.step3_title(), desc: () => m.step3_desc(), color: 'rose' as const }
 	];
 
+	// Answered from what the backend does; change these when the draw or registration rules change.
+	const faqs = [
+		{ id: 'free', question: () => m.faq_free_q(), answer: () => m.faq_free_a() },
+		{ id: 'account', question: () => m.faq_account_q(), answer: () => m.faq_account_a() },
+		{ id: 'draw', question: () => m.faq_draw_q(), answer: () => m.faq_draw_a() },
+		{ id: 'budget', question: () => m.faq_budget_q(), answer: () => m.faq_budget_a() },
+		{ id: 'results', question: () => m.faq_results_q(), answer: () => m.faq_results_a() },
+		{ id: 'late', question: () => m.faq_late_q(), answer: () => m.faq_late_a() }
+	];
+
 	// Badges data
 	const badges = [
 		{ icon: '✓', iconColor: 'text-emerald-500', message: () => m.badge_no_login() },
@@ -145,17 +155,16 @@
 <svelte:head>
 	<title>{m.seo_title()}</title>
 	<meta name="description" content={m.seo_description()} />
-	<link rel="canonical" href={localizedHome(locale)} />
-	{#each locales as alternate (alternate)}
-		<link rel="alternate" hreflang={alternate} href={localizedHome(alternate)} />
+	<link rel="canonical" href={canonical} />
+	{#each homeAlternates(page.url.origin) as { hreflang, href } (hreflang)}
+		<link rel="alternate" {hreflang} {href} />
 	{/each}
-	<link rel="alternate" hreflang="x-default" href={homeUrl.href} />
 
 	<meta property="og:type" content="website" />
 	<meta property="og:site_name" content={m.app_name()} />
 	<meta property="og:title" content={m.seo_title()} />
 	<meta property="og:description" content={m.seo_description()} />
-	<meta property="og:url" content={localizedHome(locale)} />
+	<meta property="og:url" content={canonical} />
 	<meta property="og:image" content={ogImage} />
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
@@ -295,6 +304,40 @@
 					</Button>
 				</form>
 			</Card>
+		</div>
+	</section>
+
+	<!-- Answers stay in the HTML while collapsed, so search engines read them all. -->
+	<section class="py-10" aria-labelledby="faq-title">
+		<div class="mx-auto max-w-3xl">
+			<h2
+				id="faq-title"
+				class="mb-6 text-xl font-bold tracking-tight text-slate-800 lg:text-2xl dark:text-white"
+			>
+				{m.faq_title()}
+			</h2>
+			<div class="flex flex-col gap-3">
+				{#each faqs as faq (faq.id)}
+					<details
+						class="group rounded-2xl border border-slate-900/5 bg-white shadow-sm transition-colors dark:border-slate-700/50 dark:bg-slate-800/50"
+					>
+						<summary
+							class="flex cursor-pointer list-none items-center justify-between gap-4 p-5 [&::-webkit-details-marker]:hidden"
+						>
+							<h3 class="text-base font-semibold text-slate-800 dark:text-white">
+								{faq.question()}
+							</h3>
+							<span
+								class="shrink-0 text-xl leading-none text-rose-500 transition-transform group-open:rotate-45 motion-reduce:transition-none"
+								aria-hidden="true">+</span
+							>
+						</summary>
+						<p class="px-5 pb-5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+							{faq.answer()}
+						</p>
+					</details>
+				{/each}
+			</div>
 		</div>
 	</section>
 </PageLayout>
