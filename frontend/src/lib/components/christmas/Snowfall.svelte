@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { prefersReducedMotion } from 'svelte/motion';
 	import { browser } from '$app/environment';
 
 	interface Snowflake {
@@ -34,8 +35,10 @@
 	});
 </script>
 
+<!-- Frozen flakes would only sit at the top edge, so with reduced motion there is no snow at all. This follows the
+     setting live, unlike a media query that only stops the animation. -->
 <div class="snowfall" aria-hidden="true">
-	{#each snowflakes as flake (flake.id)}
+	{#each prefersReducedMotion.current ? [] : snowflakes as flake (flake.id)}
 		<div
 			class="snowflake"
 			style="
@@ -79,14 +82,6 @@
 		}
 		100% {
 			transform: translate3d(var(--drift), 100vh, 0) rotate(360deg);
-		}
-	}
-
-	/* Reduce motion for users who prefer it */
-	@media (prefers-reduced-motion: reduce) {
-		.snowflake {
-			animation: none;
-			opacity: 0.3;
 		}
 	}
 </style>
