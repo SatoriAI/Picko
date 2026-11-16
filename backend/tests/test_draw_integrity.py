@@ -22,7 +22,7 @@ async def test_concurrent_requests_after_the_deadline_create_one_draw(client):
     event = await create_event_with_participants(client, ["Ann", "Bob", "Cid", "Dee"])
     await close_registration(event["id"])
 
-    responses = await asyncio.gather(*[client.get(f"/event/{event['id']}") for _ in range(8)])
+    responses = await asyncio.gather(*[client.get(f"/event/{event['view_token']}") for _ in range(8)])
 
     assert {response.status_code for response in responses} == {httpx.codes.OK}
     assert len(await fetch_all("SELECT id FROM draw")) == 1
@@ -82,7 +82,7 @@ async def test_a_request_waits_for_a_draw_in_progress_instead_of_starting_its_ow
     async with ENGINE.connect() as other_draw:
         await other_draw.execute(text("SELECT id FROM event WHERE id = :id FOR UPDATE"), {"id": event["id"]})
 
-        request = asyncio.create_task(client.get(f"/event/{event['id']}"))
+        request = asyncio.create_task(client.get(f"/event/{event['view_token']}"))
         await wait_until_a_query_waits_on_a_lock_held_by(other_draw)
 
         draw_id = (

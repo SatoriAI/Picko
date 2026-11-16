@@ -36,6 +36,8 @@ class Event(Base):
     # Registration
     registration_deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     registration_token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    # Opens the event page (participants and wishlists). Random, so one event's page cannot be found from another's.
+    view_token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     is_draw_complete: Mapped[bool] = mapped_column(Boolean(), default=False, nullable=False)
     notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

@@ -51,6 +51,7 @@ async def create_event(
         currency=currency,
         registration_deadline=registration_deadline,
         registration_token=secrets.token_urlsafe(32),
+        view_token=secrets.token_urlsafe(32),
         is_draw_complete=False,
     )
 
@@ -135,6 +136,10 @@ async def execute_draw_if_due(session: AsyncSession, *, event_id: int) -> bool:
     event.is_draw_complete = True
     await session.commit()
     return True
+
+
+async def get_event_id_by_view_token(session: AsyncSession, *, view_token: str) -> int | None:
+    return (await session.execute(select(Event.id).where(Event.view_token == view_token))).scalar_one_or_none()
 
 
 async def get_event_and_maybe_draw(session: AsyncSession, *, event_id: int) -> Event | None:

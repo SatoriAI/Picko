@@ -132,7 +132,7 @@
 					</p>
 					<div class="mt-5 flex justify-center">
 						<a
-							href={resolve(`/event/${event.id}`)}
+							href={resolve(`/event/${event.viewToken}`)}
 							target="_blank"
 							rel="noopener noreferrer"
 							class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 px-6 py-3 font-medium text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl"

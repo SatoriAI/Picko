@@ -18,6 +18,7 @@ router = APIRouter(prefix="/participant", tags=["Participant"])
 
 class EventInfo(BaseModel):
     id: int
+    view_token: str
     name: str
     date: datetime.date | None
     max_amount: int | None
@@ -76,6 +77,7 @@ async def get(access_token: str, session: AsyncSession = Depends(get_session)) -
         participant_name=participant.name,
         event=EventInfo(
             id=event.id,
+            view_token=event.view_token,
             name=event.name,
             date=event.date,
             max_amount=event.max_amount,

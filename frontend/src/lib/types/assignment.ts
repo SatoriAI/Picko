@@ -34,6 +34,7 @@ export interface MyStatusData {
 	participant_name: string;
 	event: {
 		id: number;
+		view_token: string;
 		name: string;
 		date: string | null;
 		max_amount: number | null;

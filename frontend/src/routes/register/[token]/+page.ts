@@ -25,6 +25,7 @@ export const load: PageLoad = async ({ params, fetch }) => {
 		currency: backendEvent.currency,
 		registrationDeadline: backendEvent.registration_deadline,
 		registrationToken: backendEvent.registration_token,
+		viewToken: backendEvent.view_token,
 		isDrawComplete: backendEvent.is_draw_complete,
 		participants: backendEvent.participants.map((p) => ({
 			id: p.id,

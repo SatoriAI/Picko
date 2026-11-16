@@ -13,6 +13,7 @@ from source.database.operations import (
     create_event,
     get_event_and_maybe_draw,
     get_event_by_registration_token,
+    get_event_id_by_view_token,
     register_participant,
 )
 from source.settings import CurrencySelection, LanguageSelection, settings
@@ -62,6 +63,7 @@ class EventRead(BaseModel):
     currency: CurrencySelection | None
     registration_deadline: datetime.datetime
     registration_token: str
+    view_token: str
     is_draw_complete: bool
     participants: list[ParticipantRead]
 
@@ -97,6 +99,7 @@ def build_event_response(event: Event) -> EventRead:
         currency=event.currency,
         registration_deadline=event.registration_deadline,
         registration_token=event.registration_token,
+        view_token=event.view_token,
         is_draw_complete=event.is_draw_complete,
         participants=participants,
     )
@@ -132,8 +135,11 @@ async def create(payload: EventCreate, session: AsyncSession = Depends(get_sessi
     return build_event_response(event)
 
 
-@router.get("/{event_id}", status_code=status.HTTP_200_OK, response_model=EventRead)
-async def get(event_id: int, session: AsyncSession = Depends(get_session)) -> EventRead:
+# By token, never by id: ids are sequential, so an id route lets anyone read every event's names and wishlists.
+@router.get("/{view_token}", status_code=status.HTTP_200_OK, response_model=EventRead)
+async def get(view_token: str, session: AsyncSession = Depends(get_session)) -> EventRead:
+    if (event_id := await get_event_id_by_view_token(session, view_token=view_token)) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
     if (event := await get_event_and_maybe_draw(session, event_id=event_id)) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
     return build_event_response(event)
