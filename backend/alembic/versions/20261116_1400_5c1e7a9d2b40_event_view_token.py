@@ -8,10 +8,15 @@ Every existing event gets its own token, so their pages move to a new address an
 working. That is the point: the ids are sequential, and anyone could read every event's names and wishlists by
 counting.
 
-Reversible: the downgrade drops the column, and the pages are reachable only by id again.
+The column defaults to gen_random_uuid() in the database. The app sets its own token, but the previous release keeps
+serving while this migration runs before the new release starts, and its inserts omit the column. The default covers
+those, and also fills the existing rows.
+
+Rolling back takes two steps, in this order: run `alembic downgrade 18e49ddd4710` while this release is still deployed,
+then redeploy the previous release. The previous release's pre-deploy `alembic upgrade head` does not know this
+revision and fails if the database is still on it.
 """
 
-import secrets
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -27,17 +32,12 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.add_column("event", sa.Column("view_token", sa.String(length=64), nullable=True))
-
-    # Generated here rather than in SQL: Postgres has no cryptographic random without pgcrypto.
-    connection = op.get_bind()
-    for (event_id,) in connection.execute(sa.text("SELECT id FROM event")):
-        connection.execute(
-            sa.text("UPDATE event SET view_token = :token WHERE id = :id"),
-            {"token": secrets.token_urlsafe(32), "id": event_id},
-        )
-
-    op.alter_column("event", "view_token", nullable=False)
+    op.add_column(
+        "event",
+        sa.Column(
+            "view_token", sa.String(length=64), server_default=sa.text("gen_random_uuid()::text"), nullable=False
+        ),
+    )
     op.create_unique_constraint("event_view_token_key", "event", ["view_token"])
 
 
