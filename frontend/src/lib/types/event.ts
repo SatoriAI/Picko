@@ -34,6 +34,7 @@ interface EventBase {
 	currency: string | null;
 	registrationDeadline: string;
 	registrationToken: string;
+	viewToken: string;
 	isDrawComplete: boolean;
 }
 
@@ -83,6 +84,7 @@ export interface BackendEvent {
 	currency: string | null;
 	registration_deadline: string;
 	registration_token: string;
+	view_token: string;
 	is_draw_complete: boolean;
 	participants: BackendParticipant[];
 }
@@ -103,6 +105,7 @@ export function transformEvent(backend: BackendEvent): EventData {
 		currency: backend.currency,
 		registrationDeadline: backend.registration_deadline,
 		registrationToken: backend.registration_token,
+		viewToken: backend.view_token,
 		isDrawComplete: backend.is_draw_complete,
 		participants: backend.participants.map(transformParticipant)
 	};

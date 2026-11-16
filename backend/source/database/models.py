@@ -11,6 +11,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -36,6 +37,11 @@ class Event(Base):
     # Registration
     registration_deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     registration_token: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    # Opens the event page (participants and wishlists). Random, so one event's page cannot be found from another's.
+    # The database default covers inserts that leave it out, like those from the release before this column existed.
+    view_token: Mapped[str] = mapped_column(
+        String(64), nullable=False, unique=True, server_default=text("gen_random_uuid()::text")
+    )
     is_draw_complete: Mapped[bool] = mapped_column(Boolean(), default=False, nullable=False)
     notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

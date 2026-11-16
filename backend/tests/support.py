@@ -66,5 +66,6 @@ async def wait_until_a_query_waits_on_a_lock_held_by(holder: AsyncConnection, ti
 
 async def run_the_draw(client: httpx.AsyncClient, event_id: int) -> None:
     await close_registration(event_id)
-    response = await client.get(f"/event/{event_id}")
+    [row] = await fetch_all("SELECT view_token FROM event WHERE id = :id", id=event_id)
+    response = await client.get(f"/event/{row.view_token}")
     assert response.json()["is_draw_complete"] is True

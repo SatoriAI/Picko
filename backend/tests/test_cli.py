@@ -118,7 +118,7 @@ async def test_delete_participant_removes_an_entry_before_the_draw(client):
 async def test_delete_participant_refuses_once_the_draw_is_complete(client):
     event = await create_event_with_participants(client, ["Ann", "Bob", "Cid"])
     await close_registration(event["id"])
-    await client.get(f"/event/{event['id']}")
+    await client.get(f"/event/{event['view_token']}")
 
     result = await run_cli("delete-participant", str(event["id"]), "Cid")
 

@@ -73,7 +73,7 @@
 					{m.my_draw_failed_contact()}
 				</p>
 				<a
-					href={resolve(`/event/${status.event.id}`)}
+					href={resolve(`/event/${status.event.view_token}`)}
 					target="_blank"
 					rel="noopener noreferrer"
 					class="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-5 py-3 font-medium text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
@@ -107,7 +107,7 @@
 						</ActionLink>
 					{/if}
 				{/if}
-				<ActionLink href={resolve(`/event/${status.event.id}`)}>
+				<ActionLink href={resolve(`/event/${status.event.view_token}`)}>
 					<span>👥</span>
 					{m.my_view_event_button()}
 				</ActionLink>
@@ -144,7 +144,7 @@
 				<!-- Primary action -->
 				<div class="mb-8 flex justify-center">
 					<a
-						href={resolve(`/event/${status.event.id}`)}
+						href={resolve(`/event/${status.event.view_token}`)}
 						target="_blank"
 						rel="noopener noreferrer"
 						class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 px-6 py-3 font-medium text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl"
