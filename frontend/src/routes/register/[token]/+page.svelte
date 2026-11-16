@@ -249,22 +249,22 @@
 						</Button>
 					</form>
 				</Card>
+			{/if}
 
-				<!-- Already registered participants -->
-				{#if event.participants.length > 0}
-					<div class="mt-6">
-						<h3
-							class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
-						>
-							{m.already_registered()}
-						</h3>
-						<div class="flex flex-wrap gap-2">
-							{#each event.participants as participant (participant.id)}
-								<Chip>{participant.name}</Chip>
-							{/each}
-						</div>
+			<!-- Already registered participants -->
+			{#if event.participants.length > 0}
+				<div class="mt-6">
+					<h3
+						class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
+					>
+						{m.already_registered()}
+					</h3>
+					<div class="flex flex-wrap gap-2">
+						{#each event.participants as participant (participant.id)}
+							<Chip>{participant.name}</Chip>
+						{/each}
 					</div>
-				{/if}
+				</div>
 			{/if}
 		</div>
 	</section>
