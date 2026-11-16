@@ -21,6 +21,14 @@ function onRailway(...names: string[]) {
 
 const REGION = { 'europe-west4-drams3a': 1 }
 
+// `REDIS_URL` on both Picko and Picko-Worker is `${{Redis.REDIS_URL}}/1`, never the bare
+// reference. Kombu keeps unacknowledged messages under fixed key names (`unacked`,
+// `unacked_index`), and every Celery worker on a database restores the entries older than
+// its own visibility timeout. Athlo-Worker shares database 0 with the default of one hour,
+// so it put each draw Picko had scheduled days ahead back on the queue hourly, and the
+// worker held every copy until the deadline: event 27 ran about seventy times at once.
+// Portfolio is on database 5.
+
 // A service setting's `dockerfilePath` resolves against the service's root directory
 // (`/backend` or `/frontend`), so `./Dockerfile` names the same file the tomls built from.
 const DOCKERFILE = { buildEnvironment: 'V3', builder: 'DOCKERFILE', dockerfilePath: './Dockerfile' } as const
