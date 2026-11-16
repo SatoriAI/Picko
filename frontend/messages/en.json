@@ -124,5 +124,12 @@
 	"my_add_to_calendar": "Add to calendar",
 	"my_email_hint": "Registered with email? You'll be notified.",
 	"my_no_email_hint": "Otherwise, bookmark this page:",
-	"footer_copyright": "© {year} Created by {name}"
+	"footer_copyright": "© {year} Created by {name}",
+	"seo_title": "Free Secret Santa generator, no sign-up | Picko",
+	"seo_description": "Draw names for Secret Santa online in seconds. Free and no accounts: set a budget and deadline, share one link, and everyone sees only who they're buying for.",
+	"og_image_alt": "Picko: Secret Santa made simple. Free, no sign-up, one link for everyone.",
+	"error_not_found_title": "Page not found",
+	"error_not_found_desc": "This link doesn't work. It may be mistyped, or the event may no longer exist.",
+	"error_generic_title": "Something went wrong",
+	"error_generic_desc": "Please try again in a moment."
 }
