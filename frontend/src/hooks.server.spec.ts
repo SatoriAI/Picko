@@ -35,4 +35,22 @@ describe('handle', () => {
 		expect(headers.get('X-Robots-Tag')).toBeNull();
 		expect(headers.get('Referrer-Policy')).toBeNull();
 	});
+
+	it.each([
+		['/pl/', '/pl'],
+		['/en/?fbclid=abc', '/en?fbclid=abc'],
+		['/my/abc/', '/my/abc'],
+		['//', '/']
+	])('redirects %s to %s without the trailing slash', async (path, location) => {
+		const event = {
+			request: new Request(`http://localhost${path}`),
+			url: new URL(`http://localhost${path}`)
+		};
+		const response = await handle({
+			event: event as RequestEvent,
+			resolve: async () => new Response('ok')
+		});
+		expect(response.status).toBe(308);
+		expect(response.headers.get('location')).toBe(location);
+	});
 });
