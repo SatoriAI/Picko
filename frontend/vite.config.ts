@@ -10,8 +10,18 @@ export default defineConfig({
 		paraglideVitePlugin({
 			project: './project.inlang',
 			outdir: './src/lib/paraglide',
-			// Prefer an explicit user choice (cookie), otherwise use browser language, finally fall back to baseLocale.
-			strategy: ['cookie', 'globalVariable', 'preferredLanguage', 'baseLocale']
+			// Only the homepage has a URL per language, so search engines can index each one; `/` redirects to the
+			// visitor's language. Token pages keep one URL and use the explicit choice (cookie), then the browser language.
+			strategy: ['url', 'cookie', 'globalVariable', 'preferredLanguage', 'baseLocale'],
+			urlPatterns: [
+				{
+					pattern: '/',
+					localized: [
+						['pl', '/pl'],
+						['en', '/en']
+					]
+				}
+			]
 		})
 	],
 	test: {
