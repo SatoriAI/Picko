@@ -69,7 +69,7 @@
 				<p class="mb-2 text-slate-500 dark:text-slate-400">
 					{m.my_draw_failed_desc()}
 				</p>
-				<p class="mb-8 text-sm text-slate-400 dark:text-slate-500">
+				<p class="mb-8 text-sm text-slate-500 dark:text-slate-400">
 					{m.my_draw_failed_contact()}
 				</p>
 				<a
@@ -159,7 +159,7 @@
 					<p class="text-center text-sm text-slate-500 dark:text-slate-400">
 						<span class="mr-1">📧</span>{m.my_email_hint()}
 						<br />
-						<span class="text-slate-400 dark:text-slate-500">{m.my_no_email_hint()}</span>
+						<span class="text-slate-500 dark:text-slate-400">{m.my_no_email_hint()}</span>
 					</p>
 					<div class="mt-3 flex justify-center">
 						<CopyButton text={myLink} size="sm" label={m.my_copy_link()} />

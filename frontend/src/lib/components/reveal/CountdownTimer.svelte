@@ -82,7 +82,7 @@
 	<!-- Minimal variant -->
 	<div class="text-center">
 		<h3
-			class="mb-6 text-sm font-medium uppercase tracking-widest text-slate-400 dark:text-slate-500"
+			class="mb-6 text-sm font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400"
 		>
 			{m.countdown_title()}
 		</h3>
@@ -92,7 +92,7 @@
 					{countdown.days}
 				</div>
 				<div
-					class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"
+					class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
 				>
 					{m.countdown_days()}
 				</div>
@@ -102,7 +102,7 @@
 					{countdown.hours}
 				</div>
 				<div
-					class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"
+					class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
 				>
 					{m.countdown_hours()}
 				</div>
@@ -112,7 +112,7 @@
 					{countdown.minutes}
 				</div>
 				<div
-					class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"
+					class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
 				>
 					{m.countdown_minutes()}
 				</div>
@@ -122,7 +122,7 @@
 					{countdown.seconds}
 				</div>
 				<div
-					class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"
+					class="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
 				>
 					{m.countdown_seconds()}
 				</div>

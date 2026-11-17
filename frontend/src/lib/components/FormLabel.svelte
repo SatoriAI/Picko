@@ -13,6 +13,6 @@
 <label for={forId} class="mb-1.5 block text-sm font-medium text-slate-600 dark:text-slate-300">
 	{@render children()}
 	{#if optional}
-		<span class="font-normal text-slate-400 dark:text-slate-500">{optional}</span>
+		<span class="font-normal text-slate-500 dark:text-slate-400">{optional}</span>
 	{/if}
 </label>

@@ -293,7 +293,7 @@
 						{#if errors.registrationDeadline}
 							<FormError message={errors.registrationDeadline} />
 						{:else}
-							<span class="mt-1.5 block text-xs text-slate-400 dark:text-slate-500">
+							<span class="mt-1.5 block text-xs text-slate-500 dark:text-slate-400">
 								{m.label_deadline_hint()}
 							</span>
 						{/if}
