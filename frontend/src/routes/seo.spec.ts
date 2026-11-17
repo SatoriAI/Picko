@@ -17,14 +17,14 @@ describe('sitemap.xml', () => {
 		expect(locs).toEqual([`${ORIGIN}/en`, `${ORIGIN}/pl`]);
 	});
 
-	it('links every entry to each language and to / as x-default', async () => {
+	it('links every entry to each language, with English as x-default', async () => {
 		const xml = await body(sitemap);
 		for (const entry of xml.split('<url>').slice(1)) {
 			const links = [...entry.matchAll(/hreflang="(.*?)" href="(.*?)"/g)].map((m) => [m[1], m[2]]);
 			expect(links).toEqual([
 				['en', `${ORIGIN}/en`],
 				['pl', `${ORIGIN}/pl`],
-				['x-default', `${ORIGIN}/`]
+				['x-default', `${ORIGIN}/en`]
 			]);
 		}
 	});
