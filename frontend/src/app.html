@@ -5,9 +5,9 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<!-- Pages reached by goto() never receive the server's Referrer-Policy header, so the token pages rely on this. -->
 		<meta name="referrer" content="no-referrer" />
-		<!-- The PNG carries a real Content-Type; adapter-node's MIME table has no entry for .ico, so that one is served untyped. -->
+		<!-- Not favicon.ico: adapter-node's MIME table has no .ico entry, so that file is served without a Content-Type. It
+		     stays in static/ for clients that request /favicon.ico by convention. -->
 		<link rel="icon" href="%sveltekit.assets%/favicon-96x96.png" type="image/png" sizes="96x96" />
-		<link rel="icon" href="%sveltekit.assets%/favicon.ico" sizes="any" />
 		<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
 		<meta name="theme-color" content="#fffbeb" media="(prefers-color-scheme: light)" />
 		<meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
