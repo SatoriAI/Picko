@@ -37,15 +37,15 @@ describe('handle', () => {
 	});
 
 	it.each([
-		['/pl/', '/pl'],
-		['/en/?fbclid=abc', '/en?fbclid=abc'],
-		['/my/abc/', '/my/abc'],
-		['//', '/']
-	])('redirects %s to %s without the trailing slash', async (path, location) => {
-		const event = {
-			request: new Request(`http://localhost${path}`),
-			url: new URL(`http://localhost${path}`)
-		};
+		['http://localhost/pl/', 'http://localhost/pl'],
+		['http://localhost/en/?fbclid=abc', 'http://localhost/en?fbclid=abc'],
+		['http://localhost/my/abc/', 'http://localhost/my/abc'],
+		['http://localhost//', 'http://localhost/'],
+		['https://www.picko.world/pl', 'https://picko.world/pl'],
+		['https://www.picko.world/', 'https://picko.world/'],
+		['https://www.picko.world/pl/?utm_source=x', 'https://picko.world/pl?utm_source=x']
+	])('redirects %s to %s', async (url, location) => {
+		const event = { request: new Request(url), url: new URL(url) };
 		const response = await handle({
 			event: event as RequestEvent,
 			resolve: async () => new Response('ok')
