@@ -37,20 +37,39 @@ describe('handle', () => {
 	});
 
 	it.each([
-		['http://localhost/pl/', 'http://localhost/pl'],
-		['http://localhost/en/?fbclid=abc', 'http://localhost/en?fbclid=abc'],
-		['http://localhost/my/abc/', 'http://localhost/my/abc'],
-		['http://localhost//', 'http://localhost/'],
+		['http://localhost/pl/', '/pl'],
+		['http://localhost/en/?fbclid=abc', '/en?fbclid=abc'],
+		['http://localhost/my/abc/', '/my/abc'],
+		['http://localhost//', '/'],
 		['https://www.picko.world/pl', 'https://picko.world/pl'],
 		['https://www.picko.world/', 'https://picko.world/'],
 		['https://www.picko.world/pl/?utm_source=x', 'https://picko.world/pl?utm_source=x']
 	])('redirects %s to %s', async (url, location) => {
-		const event = { request: new Request(url), url: new URL(url) };
 		const response = await handle({
-			event: event as RequestEvent,
+			event: pageEvent(url),
 			resolve: async () => new Response('ok')
 		});
 		expect(response.status).toBe(308);
 		expect(response.headers.get('location')).toBe(location);
 	});
+
+	it.each([
+		['an API call', pageEvent('https://www.picko.world/api/event', { method: 'POST' })],
+		[
+			'a data request',
+			{ ...pageEvent('https://www.picko.world/pl'), isDataRequest: true } as RequestEvent
+		]
+	])('serves %s on www instead of redirecting it cross-origin', async (_, event) => {
+		const response = await handle({ event, resolve: async () => new Response('ok') });
+		expect(response.status).toBe(200);
+	});
 });
+
+function pageEvent(url: string, init?: RequestInit): RequestEvent {
+	return {
+		request: new Request(url, init),
+		url: new URL(url),
+		route: { id: null },
+		isDataRequest: false
+	} as RequestEvent;
+}

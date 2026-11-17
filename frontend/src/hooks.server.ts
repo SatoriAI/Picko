@@ -18,11 +18,21 @@ export const handle: Handle = async (input) => {
 	// under its own canonicals. `/en` and `/pl` exist only as Paraglide URL patterns, which don't match a trailing
 	// slash, and no route matches `/pl/`, so SvelteKit's own trailing-slash redirect never runs for them and they would
 	// answer 404. Both are fixed in one redirect, so a URL with both problems isn't sent through a chain.
-	const canonical = new URL(input.event.url);
+	// Only page loads are redirected: an API call or data request from a page already open on www would turn into a
+	// cross-origin request (or lose its `__data.json` suffix, which event.url omits), so those are served where they are.
+	const { event } = input;
+	const isPageLoad =
+		(event.request.method === 'GET' || event.request.method === 'HEAD') && !event.isDataRequest;
+	const canonical = new URL(event.url);
 	canonical.hostname = canonical.hostname.replace(/^www\./, '');
 	canonical.pathname = canonical.pathname.replace(/\/+$/, '') || '/';
-	if (canonical.href !== input.event.url.href) {
-		return new Response(null, { status: 308, headers: { location: canonical.href } });
+	if (isPageLoad && canonical.href !== event.url.href) {
+		// Relative when only the path changes, so that redirect never depends on the proxy reporting the right scheme.
+		const location =
+			canonical.origin === event.url.origin
+				? canonical.pathname + canonical.search
+				: canonical.href;
+		return new Response(null, { status: 308, headers: { location } });
 	}
 
 	const response = await handleParaglide(input);
