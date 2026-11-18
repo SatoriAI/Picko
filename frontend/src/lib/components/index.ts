@@ -3,6 +3,7 @@ export { default as PageLayout } from './PageLayout.svelte';
 export { default as Header } from './Header.svelte';
 export { default as Footer } from './Footer.svelte';
 export { default as Card } from './Card.svelte';
+export { default as SeoHead } from './SeoHead.svelte';
 
 // Form components
 export { default as Input } from './Input.svelte';
@@ -22,6 +23,7 @@ export { default as ThemeToggle } from './ThemeToggle.svelte';
 export { default as LanguageSwitcher } from './LanguageSwitcher.svelte';
 export { default as CopyButton } from './CopyButton.svelte';
 export { default as ActionLink } from './ActionLink.svelte';
+export { default as GuideCards } from './GuideCards.svelte';
 
 // Icons
 export * from './icons';

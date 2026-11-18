@@ -3,11 +3,14 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { getLocale, locales } from '$lib/paraglide/runtime';
-	import { homeAlternates, localizedHome } from '$lib/seo';
+	import { getLocale } from '$lib/paraglide/runtime';
+	import { localizedPage } from '$lib/seo';
+	import { GUIDE_IDS } from '$lib/guides';
 	import { fetchJson } from '$lib/api/client';
 	import {
 		PageLayout,
+		SeoHead,
+		GuideCards,
 		Card,
 		Badge,
 		StepCard,
@@ -103,24 +106,20 @@
 	}
 
 	// Search engines get one URL per language for the homepage; `/` redirects visitors to theirs.
-	const OG_LOCALES = { en: 'en_US', pl: 'pl_PL' } as const;
-	const locale = getLocale();
-	const canonical = localizedHome(page.url.origin, locale);
-	const ogImage = new URL(`/og-${locale}.png`, page.url.origin).href;
-	const structuredData = JSON.stringify({
-		'@context': 'https://schema.org',
-		'@type': 'WebApplication',
-		name: m.app_name(),
-		url: canonical,
-		description: m.seo_description(),
-		inLanguage: locale,
-		applicationCategory: 'LifestyleApplication',
-		operatingSystem: 'Any',
-		isAccessibleForFree: true,
-		offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
-	}).replace(/</g, '\\u003c');
-	// The closing tag is split so it doesn't end this component's <script> block.
-	const structuredDataTag = `<script type="application/ld+json">${structuredData}</` + 'script>';
+	const structuredData = [
+		{
+			'@context': 'https://schema.org',
+			'@type': 'WebApplication',
+			name: m.app_name(),
+			url: localizedPage(page.url.origin, '/', getLocale()),
+			description: m.seo_description(),
+			inLanguage: getLocale(),
+			applicationCategory: 'LifestyleApplication',
+			operatingSystem: 'Any',
+			isAccessibleForFree: true,
+			offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
+		}
+	];
 
 	// Steps data - updated for new flow
 	const steps = [
@@ -152,32 +151,7 @@
 	];
 </script>
 
-<svelte:head>
-	<title>{m.seo_title()}</title>
-	<meta name="description" content={m.seo_description()} />
-	<link rel="canonical" href={canonical} />
-	{#each homeAlternates(page.url.origin) as { hreflang, href } (hreflang)}
-		<link rel="alternate" {hreflang} {href} />
-	{/each}
-
-	<meta property="og:type" content="website" />
-	<meta property="og:site_name" content={m.app_name()} />
-	<meta property="og:title" content={m.seo_title()} />
-	<meta property="og:description" content={m.seo_description()} />
-	<meta property="og:url" content={canonical} />
-	<meta property="og:image" content={ogImage} />
-	<meta property="og:image:width" content="1200" />
-	<meta property="og:image:height" content="630" />
-	<meta property="og:image:alt" content={m.og_image_alt()} />
-	<meta property="og:locale" content={OG_LOCALES[locale]} />
-	{#each locales.filter((l) => l !== locale) as alternate (alternate)}
-		<meta property="og:locale:alternate" content={OG_LOCALES[alternate]} />
-	{/each}
-	<meta name="twitter:card" content="summary_large_image" />
-
-	<!-- eslint-disable-next-line svelte/no-at-html-tags -- static JSON-LD built from our own strings, `<` escaped -->
-	{@html structuredDataTag}
-</svelte:head>
+<SeoHead route="/" title={m.seo_title()} description={m.seo_description()} {structuredData} />
 
 <PageLayout>
 	<!-- Hero Section -->
@@ -338,6 +312,19 @@
 					</details>
 				{/each}
 			</div>
+		</div>
+	</section>
+
+	<section class="pb-10" aria-labelledby="guides-title">
+		<div class="mx-auto max-w-3xl">
+			<h2
+				id="guides-title"
+				class="mb-2 text-xl font-bold tracking-tight text-slate-800 lg:text-2xl dark:text-white"
+			>
+				{m.guides_title()}
+			</h2>
+			<p class="mb-6 text-slate-500 dark:text-slate-400">{m.guides_intro()}</p>
+			<GuideCards ids={GUIDE_IDS} />
 		</div>
 	</section>
 </PageLayout>

@@ -144,5 +144,11 @@
 	"faq_results_q": "Kto widzi wyniki losowania?",
 	"faq_results_a": "Każdy uczestnik widzi na swojej prywatnej stronie tylko osobę, której kupuje prezent. Picko nikomu nie pokazuje pełnej listy par, nawet organizatorowi. Cała grupa widzi jedynie, kto się zapisał, i listy życzeń uczestników.",
 	"faq_late_q": "Co jeśli ktoś zapisze się po terminie?",
-	"faq_late_a": "Zapisy zamykają się wraz z upływem terminu, a losowanie odbywa się wśród osób, które zdążyły się zapisać. Nikogo nie da się dodać do losowania, które już się odbyło, więc wybierz termin, który da wszystkim czas. Jeśli ktoś się nie zmieści, utwórz nowe wydarzenie i wyślij jego link."
+	"faq_late_a": "Zapisy zamykają się wraz z upływem terminu, a losowanie odbywa się wśród osób, które zdążyły się zapisać. Nikogo nie da się dodać do losowania, które już się odbyło, więc wybierz termin, który da wszystkim czas. Jeśli ktoś się nie zmieści, utwórz nowe wydarzenie i wyślij jego link.",
+	"guides_title": "Poradniki",
+	"guides_intro": "Praktyczne wskazówki, jak zorganizować mikołajki w każdej grupie.",
+	"guide_cta_title": "Gotowi na losowanie?",
+	"guide_cta_desc": "Załóż darmowe losowanie mikołajkowe w niecałą minutę. Bez kont: wyślij jeden link, a losowanie odbędzie się samo po upływie terminu.",
+	"guide_cta_button": "Utwórz darmowe losowanie",
+	"guide_more_title": "Więcej poradników"
 }

@@ -144,5 +144,11 @@
 	"faq_results_q": "Who can see who drew whom?",
 	"faq_results_a": "Each participant sees only who they're buying for, on their own private page. Picko never shows anyone the full list of pairs, not even the organizer. What the group does share is the list of who has joined and everyone's wishlists.",
 	"faq_late_q": "What if someone registers late?",
-	"faq_late_a": "Registration closes at the deadline, and the draw goes ahead with whoever has signed up by then. Nobody can be added to a draw that has already happened, so pick a deadline that gives everyone time. If someone is left out, create a new event and share its link."
+	"faq_late_a": "Registration closes at the deadline, and the draw goes ahead with whoever has signed up by then. Nobody can be added to a draw that has already happened, so pick a deadline that gives everyone time. If someone is left out, create a new event and share its link.",
+	"guides_title": "Guides",
+	"guides_intro": "Practical tips for running a gift exchange with any group.",
+	"guide_cta_title": "Ready to draw names?",
+	"guide_cta_desc": "Create a free Secret Santa in under a minute. No accounts: share one link and the draw happens by itself at the deadline.",
+	"guide_cta_button": "Create a free draw",
+	"guide_more_title": "More guides"
 }
