@@ -25,7 +25,7 @@
 				href="https://github.com/dawidhanrahan"
 				target="_blank"
 				rel="noopener noreferrer"
-				class="text-slate-400 transition-colors hover:text-rose-500 dark:text-slate-500"
+				class="text-slate-500 transition-colors hover:text-rose-500 dark:text-slate-400"
 				aria-label="GitHub"
 			>
 				<GitHubIcon />

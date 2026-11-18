@@ -217,7 +217,7 @@
 								bind:value={email}
 								placeholder={m.placeholder_email()}
 							/>
-							<span class="mt-1.5 block text-xs text-slate-400 dark:text-slate-500">
+							<span class="mt-1.5 block text-xs text-slate-500 dark:text-slate-400">
 								{m.email_hint()}
 							</span>
 						</div>
@@ -237,7 +237,7 @@
 								placeholder={m.placeholder_wishlist()}
 								rows={3}
 							/>
-							<span class="mt-1.5 block text-xs text-slate-400 dark:text-slate-500">
+							<span class="mt-1.5 block text-xs text-slate-500 dark:text-slate-400">
 								{m.wishlist_hint()}
 							</span>
 
