@@ -63,6 +63,38 @@ describe('handle', () => {
 		const response = await handle({ event, resolve: async () => new Response('ok') });
 		expect(response.status).toBe(200);
 	});
+
+	const html = () => new Response('<p>ok</p>', { headers: { 'content-type': 'text/html' } });
+
+	it.each(['http://localhost/', 'http://localhost/my/abc'])(
+		'marks %s as varying by language, which it reads from the cookie or browser',
+		async (url) => {
+			const response = await handle({ event: pageEvent(url), resolve: async () => html() });
+			expect(response.headers.get('vary')).toBe('Cookie, Accept-Language');
+		}
+	);
+
+	it('adds Cookie to the Vary of the redirect from / without repeating Accept-Language', async () => {
+		const request = new Request('http://localhost/', {
+			headers: { 'Sec-Fetch-Dest': 'document', 'Accept-Language': 'pl' }
+		});
+		const event = { ...pageEvent('http://localhost/'), request } as RequestEvent;
+		const response = await handle({ event, resolve: async () => html() });
+		expect(response.status).toBe(307);
+		expect(response.headers.get('vary')).toBe('Accept-Language, Cookie');
+	});
+
+	it.each([
+		['a page whose address names its language', 'http://localhost/pl', html],
+		[
+			'a file that is the same in every language',
+			'http://localhost/sitemap.xml',
+			() => new Response('<urlset/>', { headers: { 'content-type': 'application/xml' } })
+		]
+	])('leaves Vary off %s', async (_, url, resolve) => {
+		const response = await handle({ event: pageEvent(url), resolve: async () => resolve() });
+		expect(response.headers.get('vary')).toBeNull();
+	});
 });
 
 function pageEvent(url: string, init?: RequestInit): RequestEvent {
