@@ -1,5 +1,6 @@
 import type { Handle } from '@sveltejs/kit';
 import { paraglideMiddleware } from '$lib/paraglide/server';
+import { extractLocaleFromUrl } from '$lib/paraglide/runtime';
 
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {
@@ -37,6 +38,15 @@ export const handle: Handle = async (input) => {
 
 	const response = await handleParaglide(input);
 
+	// Where the address carries no language (`/` and the secret-link pages), Paraglide picks it from the cookie, then
+	// Accept-Language, so the same URL answers in different languages. Say so, or a cache could serve one visitor's
+	// language to everyone. Pages (HTML) and Paraglide's redirect from `/` (307) are the responses that depend on it.
+	const dependsOnLanguage =
+		response.status === 307 || response.headers.get('content-type')?.startsWith('text/html');
+	if (isPageLoad && dependsOnLanguage && !extractLocaleFromUrl(event.url)) {
+		addVary(response.headers, ['Cookie', 'Accept-Language']);
+	}
+
 	if (input.event.route.id?.includes('[token]')) {
 		response.headers.set('X-Robots-Tag', 'noindex, nofollow');
 		response.headers.set('Referrer-Policy', 'no-referrer');
@@ -44,3 +54,13 @@ export const handle: Handle = async (input) => {
 
 	return response;
 };
+
+function addVary(headers: Headers, names: string[]): void {
+	const present = (headers.get('vary') ?? '')
+		.split(',')
+		.map((name) => name.trim().toLowerCase())
+		.filter(Boolean);
+	const missing = names.filter((name) => !present.includes(name.toLowerCase()));
+	if (missing.length > 0)
+		headers.set('vary', [headers.get('vary'), ...missing].filter(Boolean).join(', '));
+}

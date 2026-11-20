@@ -9,13 +9,17 @@
 		     stays in static/ for clients that request /favicon.ico by convention. -->
 		<link rel="icon" href="%sveltekit.assets%/favicon-96x96.png" type="image/png" sizes="96x96" />
 		<link rel="apple-touch-icon" href="%sveltekit.assets%/apple-touch-icon.png" />
-		<meta name="theme-color" content="#fffbeb" media="(prefers-color-scheme: light)" />
-		<meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
+		<!-- Follows the in-app theme toggle rather than the OS setting, because the page does: it starts light unless dark
+		     mode was chosen. +layout.svelte updates it when the toggle changes. -->
+		<meta name="theme-color" content="#fffbeb" />
 		<script>
 			(() => {
 				try {
 					const stored = localStorage.getItem('darkMode');
-					if (stored === 'true') document.documentElement.classList.add('dark');
+					if (stored === 'true') {
+						document.documentElement.classList.add('dark');
+						document.querySelector('meta[name="theme-color"]').content = '#0f172a';
+					}
 				} catch {
 					// ignore
 				}

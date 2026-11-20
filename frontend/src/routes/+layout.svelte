@@ -10,6 +10,10 @@
 	$effect(() => {
 		if (!browser) return;
 		document.documentElement.classList.toggle('dark', $darkMode);
+		// The browser bar matches the header: amber-50 or slate-900, as set first in app.html.
+		document
+			.querySelector('meta[name="theme-color"]')
+			?.setAttribute('content', $darkMode ? '#0f172a' : '#fffbeb');
 	});
 </script>
 
